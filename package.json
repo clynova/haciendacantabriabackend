@@ -1,0 +1,37 @@
+{
+  "name": "haciendacantabriabackend",
+  "version": "1.0.0",
+  "description": "",
+  "license": "MIT",
+  "author": "clynova",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "compression": "^1.8.0",
+    "cors": "^2.8.5",
+    "crypto-js": "^4.2.0",
+    "dotenv": "^16.4.7",
+    "envalid": "^8.0.0",
+    "express": "^4.21.2",
+    "express-rate-limit": "^7.5.0",
+    "express-validator": "^7.2.1",
+    "helmet": "^8.0.0",
+    "jsonwebtoken": "^9.0.2",
+    "mercadopago": "^2.3.0",
+    "mongoose": "^8.9.5",
+    "morgan": "^1.10.0",
+    "transbank-sdk": "^5.0.0",
+    "winston": "^3.17.0"
+  },
+  "devDependencies": {
+    "@types/compression": "^1.7.5",
+    "@types/helmet": "^0.0.48",
+    "@types/morgan": "^1.9.9",
+    "nodemon": "^3.1.9"
+  }
+}

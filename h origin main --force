@@ -1,0 +1,383 @@
+[33mcommit f4bc42d71118e11480e955ef18aea8787b847f34[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m)[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Wed Mar 12 12:00:00 2025 -0300
+
+    test
+
+[33mcommit 57ea06e5e88d7d123325f6e17f9e7acc6759d63a[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 11 22:14:07 2025 -0300
+
+    test
+
+[33mcommit 907113492c0b4bd687581e4b4f49bb9fb9d86976[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 11 21:52:15 2025 -0300
+
+    se corrigen bugos de formas de envio
+
+[33mcommit 01eeb53836b0df8cbc07de4b58301cf5044c3ff0[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 11 21:36:38 2025 -0300
+
+    test
+
+[33mcommit 96f2a68c2a8a4c16c4f0dbb1713ccf6b9f6c5d8c[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 11 13:54:11 2025 -0300
+
+    se agregan los tags correctamente
+
+[33mcommit 08564e2f345fea163d3594db46f1ca51cb72fba8[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 11 13:37:37 2025 -0300
+
+    test
+
+[33mcommit 2620113b76049681ca8f17a0b3b4fc2ce01a1760[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 11 12:55:39 2025 -0300
+
+    test
+
+[33mcommit a2d03e5547904bb590f56e3d41a0e129b43abbd4[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 11 12:54:11 2025 -0300
+
+    test
+
+[33mcommit d101cf8e371ea1e763300787b848d6e5504b9fd8[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Mar 9 14:38:11 2025 -0300
+
+    Se modifico modelo de ordenes
+
+[33mcommit 7a3b902c9ff874df4dd683c239627c0b375bba94[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Mar 9 11:51:43 2025 -0300
+
+    se modifico modelo de ordenes para adjuntar comisiones
+
+[33mcommit e65db1cab815ec8f3d964159b248458b45428d2e[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Mar 9 02:08:48 2025 -0300
+
+    se comienza a trabajar en los detalles del producto
+
+[33mcommit 76ced7a8c38b80a49cc88d0268de131549c9e611[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Mar 7 23:01:44 2025 -0300
+
+    se corrigen rutas
+
+[33mcommit 24ded1dba132db970cec2d51a3486b9d89c6af50[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Mar 7 21:45:43 2025 -0300
+
+    se corrigen rutas
+
+[33mcommit 483c0a7e3a56b0b6bf24ac2dad969e41a1362280[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Mar 7 14:04:24 2025 -0300
+
+    Se cambia logica de order, ahora tiene mayor seguridad
+
+[33mcommit 40f50b53c55ec32fcdcfaf833b17d6b7c6713247[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Mar 7 13:15:47 2025 -0300
+
+    test
+
+[33mcommit 63080d2091cc5bf769023fe42057bd73187be4fd[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Mar 7 01:42:29 2025 -0300
+
+    se corrigen rutas
+
+[33mcommit 490547b394b384005b97658998b930f6b87555fc[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 21:07:17 2025 -0300
+
+    test
+
+[33mcommit 69722c8ad40756bd89864645df527e8e4c63b53f[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 16:03:27 2025 -0300
+
+    Se finaliza proceso de compra a travez de webpay
+
+[33mcommit 8e05e1b36d6f55d7c49fa7c5f3a2c5cba353e99d[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 14:20:07 2025 -0300
+
+    test
+
+[33mcommit 4ccfb2802b70f3e68a933bde218140d35661f0a8[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 13:43:43 2025 -0300
+
+    version estable de ordenes
+
+[33mcommit 78b941837ca8d794db672a9f7600a7f353ea6888[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 13:38:55 2025 -0300
+
+    se cambian tipos de pago y sus validaciones
+
+[33mcommit 935927ceffd72716f784d248587b90fc46b70657[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 04:44:38 2025 -0300
+
+    Se arreglo modelo de orders
+
+[33mcommit ec54d9d2d7982b39e6f099d49ff184aeb5e6a4c1[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 02:53:34 2025 -0300
+
+    prueba proceso de compra
+
+[33mcommit 409a0045dd397ef050e6f9bfdc15c14ecb8761cc[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Mar 6 01:38:46 2025 -0300
+
+    Se arreglaron los metodos de pago
+
+[33mcommit 05addec5ac3c74bfd678e14b5483139ba31d6fee[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 4 23:56:11 2025 -0300
+
+    Se cambia address
+
+[33mcommit b857d0829804a6e3610fc3a85210594e3a6a6903[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 4 20:13:34 2025 -0300
+
+    Se mejoro orden
+
+[33mcommit ae81d174a49b2eb990f4048c79a87cfc1b047d8e[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 4 19:24:02 2025 -0300
+
+    se creo metodos de envio y nuevas opciones en shippingaddress
+
+[33mcommit a4f99dbf08c4c81f71fcaa76362e83b79762926e[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Mar 4 18:59:50 2025 -0300
+
+    se corrige tipos de pagos
+
+[33mcommit 68c103352c1a06297e58ac5ceda925696d424144[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Mar 2 15:01:03 2025 -0300
+
+    Se crea CRUD de metodos de pago
+
+[33mcommit b31ba645093d221755de28203139dd9f4bce1954[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Feb 27 17:23:25 2025 -0300
+
+    Se  arregla la ruta
+
+[33mcommit e969503371cdeb15801ed9782ac3c2cff997eecd[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Wed Feb 26 07:23:36 2025 -0300
+
+    Se agrego configuracion para que el usuario pueda agregar mas de un direccion
+
+[33mcommit 21225b955b3adfdaeb96f9b2bc7b14042022dcc8[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Feb 25 02:09:35 2025 -0300
+
+    se agrego modelamiento de whislist
+
+[33mcommit 4f664260a592b7d50aa7fe587642ba9309ca2dac[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Feb 25 01:16:44 2025 -0300
+
+    Se validaron rutas de ordenes
+
+[33mcommit 4037c595520f5bf2936629befde77187fb156450[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Feb 23 13:36:38 2025 -0300
+
+    se cambia limit de los cors
+
+[33mcommit c4357329f358a52f0ecb17d5a087d036f72f8414[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Feb 23 13:19:01 2025 -0300
+
+    Se valida cuando el token esta bloqueado
+
+[33mcommit c04042352125feaee68d3eb323ade81c922293d0[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sat Feb 22 23:31:06 2025 -0300
+
+    Se validatoken
+
+[33mcommit 9d30043b2e29e350fca7017338cccda45ee88a47[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Feb 21 11:56:06 2025 -0300
+
+    se crearon nuevas vaidaciones,  se cambiaron rutas
+
+[33mcommit 57ab37e22fbaefa91657e1c77a8865a57c6be9ec[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Feb 21 01:08:24 2025 -0300
+
+    se fixearon rutas
+
+[33mcommit 65021c0f8c358ab6f4ee3a2ba7e5cda40c09e8a5[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Feb 20 23:24:28 2025 -0300
+
+    se fixearon cors
+
+[33mcommit e35cd2faee8b04b6c91c52396304beb78d2ace73[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Feb 20 21:22:19 2025 -0300
+
+    Se cambio registro de usuario
+
+[33mcommit dd38678a878029c01b846438d561998a940fd3aa[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sat Feb 15 01:46:08 2025 -0300
+
+    Se agregaron endpoints faltantes
+
+[33mcommit f604667499020cd92fc2357c5222a9a7223ebd41[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sat Feb 15 01:07:45 2025 -0300
+
+    Se aparte html del codigo
+
+[33mcommit 0ccdc478bc08e6813ce17997c9467f3dd290b918[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sat Feb 15 00:21:50 2025 -0300
+
+    Pagina de inicio para ver documentos del proyecto
+
+[33mcommit 824e7096d4c5b0cd4904fed6cf877a2af20300e1[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Feb 14 23:19:23 2025 -0300
+
+    Se agregaron validaciones limitadores a llamadas de API
+
+[33mcommit 93b0e13e5238cf40f3070d80be801d18e91c00ec[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Feb 4 14:38:16 2025 -0300
+
+    Primera version estable de cryback
+
+[33mcommit a1ef0d3e2c937766098c668f89a95cadab43ce7b[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Mon Feb 3 21:57:51 2025 -0300
+
+    Se agregan nuevas validaciones
+
+[33mcommit 3580eec0770f6af5b9ef5d9d62f3ebf59ddcf972[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Mon Feb 3 20:31:43 2025 -0300
+
+    fix en users
+
+[33mcommit f46f8d8e623ac0e53ebecaa0cd52a974b42bae30[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Feb 2 23:13:55 2025 -0300
+
+    Se finalizo update de user
+
+[33mcommit fe630426e2ce63aea6372b1493e3cdef53216c04[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Feb 2 23:02:09 2025 -0300
+
+    Se arregla bug de users
+
+[33mcommit a89684fe3c9857bc9fb54f0fd510395e32aa5e2c[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sat Feb 1 19:52:05 2025 -0300
+
+    Se agregan nuevas funcionalidades al controlador de users
+
+[33mcommit 621b1386bebfd0ece1cde1bf1c1fc8bc24ed1d59[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Jan 31 16:02:10 2025 -0300
+
+    Se modifica nombre de funciones para un mayor standard
+
+[33mcommit 422d07cd4156ef9ae956c57675746b4701b8b85b[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Fri Jan 31 10:43:26 2025 -0300
+
+    Se corrigen validaciones
+
+[33mcommit de62b14f1b2733c9f3c3abce7b5da16ab58d8bd2[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Jan 30 17:21:10 2025 -0300
+
+    Se agrego la orden
+
+[33mcommit 7d9e8160f53f0cf0d86b27c2e4298c33567f92de[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Thu Jan 30 09:57:19 2025 -0300
+
+    trabajando en el carrito de compras
+
+[33mcommit 6f14468d76582392f0629eeec300d6781b2abbf1[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Wed Jan 29 16:54:04 2025 -0300
+
+    Se agregaron mas validaciones y posibles bugs
+
+[33mcommit 24ec030b7f96cf00034304f0a3a65da86d37e165[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Wed Jan 29 00:43:06 2025 -0300
+
+    Se agrego CRUD completo de Categorias
+
+[33mcommit ee8ab6542043fe2bfc3af1de26890d3a553dc9c3[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Jan 28 13:54:01 2025 -0300
+
+    Se termino la parte de autenticar
+
+[33mcommit d6927dd9ecd756a8a26ddf8a73b63c79a54f0fd1[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Tue Jan 28 01:44:03 2025 -0300
+
+    Se agrego jwt al login
+
+[33mcommit feb606c231f45530f635701ccb6beae5397eccb5[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Mon Jan 27 22:41:57 2025 -0300
+
+    Se agregaron llamadas a la base de datos y validaciones multiples
+
+[33mcommit aabe2739702bf9f684d2908114dba0ab3f342d5d[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Mon Jan 27 01:32:24 2025 -0300
+
+    Remove .env from repository
+
+[33mcommit 7256f6f27b6e162925c1f0f71da3cd95bb62669b[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Mon Jan 27 01:31:00 2025 -0300
+
+    Pasaron cositas
+
+[33mcommit 9d1c7a9b67034169a0d3cb2d5df3e5b7812f6044[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Mon Jan 27 01:29:52 2025 -0300
+
+    Se genero schema para User
+
+[33mcommit 4e957e3b32acc8c2960f99df0714bc984f864664[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sun Jan 26 22:24:16 2025 -0300
+
+    configuraciones iniciales
+
+[33mcommit a3c55ce9697eaac55e146a0c2d413c903115fe0e[m
+Author: Clynova <clynova.dev@gmail.com>
+Date:   Sat Jan 25 22:05:05 2025 -0300
+
+    first commit owo
