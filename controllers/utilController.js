@@ -21,14 +21,15 @@ const getDashboardStats = async (req, res) => {
         const uniqueTags = [...new Set(allTags)];
         const totalTags = uniqueTags.length;
 
-        // Enviar las estadísticas al cliente
-        res.status(200).json({
+        const data = {
             totalProducts,
             totalOrders,
             totalUsers,
             totalTags,
             uniqueTags
-        });
+        };
+
+        res.status(200).send({ success: true, msg: 'Estadisticas enviadas', data });
     } catch (error) {
         res.status(500).json({ 
             message: 'Error al obtener las estadísticas del dashboard',
