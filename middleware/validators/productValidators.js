@@ -1,101 +1,159 @@
 import { body, param } from 'express-validator';
+import { EstadoProducto, CategoriaProducto, TipoCarne, CorteVacuno, TipoAceite, MetodoCoccion, TipoEnvase } from '../../models/Product.js';
 
-const validateProductRegistration = [
-    body('name')
+// Base product validation rules
+const baseProductValidationRules = [
+    body('codigo')
         .trim()
-        .notEmpty().withMessage('El nombre del producto es requerido')
+        .notEmpty().withMessage('El código del producto es requerido')
+        .isString().withMessage('El código debe ser una cadena de texto'),
+
+    body('sku')
+        .trim()
+        .notEmpty().withMessage('El SKU es requerido')
+        .isString().withMessage('El SKU debe ser una cadena de texto'),
+
+    body('nombre')
+        .trim()
+        .notEmpty().withMessage('El nombre es requerido')
         .isLength({ min: 3 }).withMessage('El nombre debe tener al menos 3 caracteres'),
 
-    body('description')
+    body('categoria')
         .trim()
-        .notEmpty().withMessage('La descripción es requerida')
-        .isLength({ min: 10 }).withMessage('La descripción debe tener al menos 10 caracteres'),
+        .notEmpty().withMessage('La categoría es requerida')
+        .isIn(CategoriaProducto).withMessage('Categoría no válida'),
 
-    body('price')
-        .notEmpty().withMessage('El precio es requerido')
-        .isFloat({ gt: 0 }).withMessage('El precio debe ser un número mayor a 0'),
-
-    body('images')
+    body('estado')
         .optional()
-        .isArray().withMessage('Las imágenes deben ser un array')
-        .custom((images) => {
-            if (!images.every(img => /\.(jpg|jpeg|png|webp|gif)$/.test(img))) {
-                throw new Error('Cada imagen debe tener un formato válido (JPG, PNG, WEBP o GIF)');
-            }
-            return true;
-        }),
+        .isIn(EstadoProducto).withMessage('Estado no válido'),
 
-    body('stock')
+    body('destacado')
         .optional()
-        .isInt({ min: 0 }).withMessage('El stock debe ser un número entero positivo'),
+        .isBoolean().withMessage('Destacado debe ser un valor booleano'),
 
-    body('createdAt')
+    body('descripcion.corta')
         .optional()
-        .isISO8601().withMessage('La fecha de creación debe ser una fecha válida'),
+        .isLength({ max: 160 }).withMessage('La descripción corta no puede exceder 160 caracteres'),
 
-    body('updatedAt')
+    body('descripcion.completa')
+        .optional(),
+
+    body('precios.base')
+        .notEmpty().withMessage('El precio base es requerido')
+        .isFloat({ min: 0 }).withMessage('El precio base debe ser un número positivo'),
+
+    body('precios.descuentos.regular')
         .optional()
-        .isISO8601().withMessage('La fecha de actualización debe ser una fecha válida'),
+        .isFloat({ min: 0, max: 100 }).withMessage('El descuento regular debe estar entre 0 y 100'),
+
+    body('precios.descuentos.transferencia')
+        .optional()
+        .isFloat({ min: 0, max: 100 }).withMessage('El descuento por transferencia debe estar entre 0 y 100'),
+
+    body('multimedia.imagenes.*.url')
+        .optional()
+        .isURL().withMessage('La URL de la imagen debe ser válida'),
+
+    body('multimedia.imagenes.*.esPrincipal')
+        .optional()
+        .isBoolean().withMessage('esPrincipal debe ser un valor booleano'),
+
+    body('conservacion.requiereRefrigeracion')
+        .optional()
+        .isBoolean().withMessage('requiereRefrigeracion debe ser un valor booleano'),
+
+    body('conservacion.requiereCongelacion')
+        .optional()
+        .isBoolean().withMessage('requiereCongelacion debe ser un valor booleano')
+];
+
+// Meat product specific validation rules
+const meatProductValidationRules = [
+    body('infoCarne.tipoCarne')
+        .notEmpty().withMessage('El tipo de carne es requerido')
+        .isIn(TipoCarne).withMessage('Tipo de carne no válido'),
+
+    body('infoCarne.corte')
+        .optional()
+        .isIn(CorteVacuno).withMessage('Corte no válido'),
+
+    body('infoCarne.precioPorKg')
+        .notEmpty().withMessage('El precio por kg es requerido')
+        .isFloat({ min: 0 }).withMessage('El precio por kg debe ser un número positivo'),
+
+    body('caracteristicas.porcentajeGrasa')
+        .optional()
+        .isFloat({ min: 0, max: 100 }).withMessage('El porcentaje de grasa debe estar entre 0 y 100'),
+
+    body('caracteristicas.marmoleo')
+        .optional()
+        .isInt({ min: 1, max: 5 }).withMessage('El marmoleo debe estar entre 1 y 5'),
+
+    body('coccion.metodos.*')
+        .optional()
+        .isIn(MetodoCoccion).withMessage('Método de cocción no válido'),
+
+    body('empaque.tipo')
+        .optional()
+        .isIn(TipoEnvase).withMessage('Tipo de envase no válido'),
+
+    body('inventario.stockKg')
+        .notEmpty().withMessage('El stock en kg es requerido')
+        .isFloat({ min: 0 }).withMessage('El stock en kg debe ser un número positivo')
+];
+
+// Oil product specific validation rules
+const oilProductValidationRules = [
+    body('infoAceite.tipo')
+        .notEmpty().withMessage('El tipo de aceite es requerido')
+        .isIn(TipoAceite).withMessage('Tipo de aceite no válido'),
+
+    body('infoAceite.volumen')
+        .notEmpty().withMessage('El volumen es requerido')
+        .isFloat({ min: 0 }).withMessage('El volumen debe ser un número positivo'),
+
+    body('infoAceite.envase')
+        .optional()
+        .isIn(TipoEnvase).withMessage('Tipo de envase no válido'),
+
+    body('inventario.stockUnidades')
+        .notEmpty().withMessage('El stock en unidades es requerido')
+        .isInt({ min: 0 }).withMessage('El stock en unidades debe ser un número entero positivo')
+];
+
+const validateProductRegistration = [
+    ...baseProductValidationRules,
+    body('tipoProducto')
+        .notEmpty().withMessage('El tipo de producto es requerido')
+        .isIn(['ProductoCarne', 'ProductoAceite']).withMessage('Tipo de producto no válido')
 ];
 
 const validateProductModificar = [
     param('_id')
         .notEmpty().withMessage('El ID es requerido')
         .isMongoId().withMessage('El ID no es válido'),
-
-    body('name')
-        .trim()
-        .optional()
-        .isLength({ min: 3, max: 100 }).withMessage('El nombre debe tener entre 3 y 100 caracteres'),
-
-    body('description')
-        .trim()
-        .optional()
-        .isLength({ min: 10, max: 1000 }).withMessage('La descripción debe tener entre 10 y 1000 caracteres'),
-
-    body('price')
-        .optional()
-        .isFloat({ gt: 0, lt: 1000000 }).withMessage('El precio debe ser un número mayor a 0 y menor a 1,000,000'),
-
-    body('images')
-        .optional()
-        .isArray({ min: 1, max: 10 }).withMessage('Debes proporcionar entre 1 y 10 imágenes')
-        .custom((images) => {
-            if (!images.every(img => /\.(jpg|jpeg|png|webp|gif)$/.test(img))) {
-                throw new Error('Cada imagen debe tener un formato válido (JPG, PNG, WEBP o GIF)');
-            }
-            return true;
-        }),
-
-    body('stock')
-        .optional()
-        .isInt({ min: 0, max: 100000 }).withMessage('El stock debe ser un número entero entre 0 y 100,000'),
-
-    body('createdAt')
-        .optional()
-        .isISO8601().withMessage('La fecha de creación debe ser una fecha válida')
-        .custom((value) => {
-            if (new Date(value) > new Date()) {
-                throw new Error('La fecha de creación no puede ser futura');
-            }
-            return true;
-        }),
-
-    body('updatedAt')
-        .optional()
-        .isISO8601().withMessage('La fecha de actualización debe ser una fecha válida')
-        .custom((value) => {
-            if (new Date(value) > new Date()) {
-                throw new Error('La fecha de actualización no puede ser futura');
-            }
-            return true;
-        }),
+    body('codigo').optional().trim().notEmpty().withMessage('El código no puede estar vacío'),
+    body('sku').optional().trim().notEmpty().withMessage('El SKU no puede estar vacío'),
+    body('nombre').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío'),
+    body('categoria').optional().isIn(CategoriaProducto).withMessage('Categoría no válida'),
+    body('estado').optional().isIn(EstadoProducto).withMessage('Estado no válido'),
+    body('tipoProducto').optional().isIn(['ProductoCarne', 'ProductoAceite']).withMessage('Tipo de producto no válido'),
+    
+    // Validaciones específicas para ProductoCarne
+    body('infoCarne.tipoCarne').optional().isIn(TipoCarne).withMessage('Tipo de carne no válido'),
+    body('infoCarne.corte').optional().isIn(CorteVacuno).withMessage('Corte no válido'),
+    body('infoCarne.precioPorKg').optional().isFloat({ min: 0 }).withMessage('El precio por kg debe ser un número positivo'),
+    
+    // Validaciones específicas para ProductoAceite
+    body('infoAceite.tipo').optional().isIn(TipoAceite).withMessage('Tipo de aceite no válido'),
+    body('infoAceite.volumen').optional().isFloat({ min: 0 }).withMessage('El volumen debe ser un número positivo'),
+    body('infoAceite.envase').optional().isIn(TipoEnvase).withMessage('Tipo de envase no válido')
 ];
 
 const validateProductID = [
     param('_id')
         .notEmpty().withMessage('El ID es requerido')
-        .isMongoId().withMessage('El ID no es válido'),
+        .isMongoId().withMessage('El ID no es válido')
 ];
 
 export { validateProductRegistration, validateProductModificar, validateProductID };

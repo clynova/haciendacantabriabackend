@@ -27,7 +27,6 @@ import {
     addressValidationRules
 } from '../middleware/validators/userValidators.js';
 import { checkAuth, checkTokenBlacklist, checkRole, checkOwnerOrAdmin, validateToken } from '../middleware/authMiddleware.js';
-import { User } from '../models/User.js';
 
 const userRoutes = express.Router();
 
