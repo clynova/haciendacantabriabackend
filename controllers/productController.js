@@ -105,7 +105,6 @@ const updateProduct = async (req, res) => {
 
         const { _id } = req.params;
         
-        // First find the product to get its type
         const existingProduct = await ProductoBase.findById(_id);
         if (!existingProduct) {
             return res.status(404).send({ 
@@ -114,7 +113,7 @@ const updateProduct = async (req, res) => {
             });
         }
 
-        // If trying to change product type, prevent it
+        // No permitir cambiar el tipo de producto
         if (req.body.tipoProducto && req.body.tipoProducto !== existingProduct.tipoProducto) {
             return res.status(400).send({ 
                 success: false, 
@@ -122,13 +121,27 @@ const updateProduct = async (req, res) => {
             });
         }
 
-        // Update the product
-        const updatedProduct = await ProductoBase.findByIdAndUpdate(
+        // Realizar la actualización con el modelo correcto según el tipo
+        let ModeloProducto;
+        switch (existingProduct.tipoProducto) {
+            case 'ProductoCarne':
+                ModeloProducto = ProductoCarne;
+                break;
+            case 'ProductoAceite':
+                ModeloProducto = ProductoAceite;
+                break;
+            default:
+                ModeloProducto = ProductoBase;
+        }
+
+        const datosActualizacion = {
+            ...req.body,
+            fechaActualizacion: new Date()
+        };
+
+        const updatedProduct = await ModeloProducto.findByIdAndUpdate(
             _id,
-            { 
-                ...req.body,
-                fechaActualizacion: new Date()
-            },
+            datosActualizacion,
             { 
                 new: true,
                 runValidators: true

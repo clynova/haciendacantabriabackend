@@ -125,51 +125,29 @@ const validateProductRegistration = [
     ...baseProductValidationRules,
     body('tipoProducto')
         .notEmpty().withMessage('El tipo de producto es requerido')
-        .isIn(['ProductoCarne', 'ProductoAceite']).withMessage('Tipo de producto no válido'),
-    (req, res, next) => {
-        const tipoProducto = req.body.tipoProducto;
-        let validations = [];
-        
-        if (tipoProducto === 'ProductoCarne') {
-            validations = meatProductValidationRules;
-        } else if (tipoProducto === 'ProductoAceite') {
-            validations = oilProductValidationRules;
-        }
-        
-        Promise.all(validations.map(validation => validation.run(req)))
-            .then(() => next())
-            .catch(error => next(error));
-    }
+        .isIn(['ProductoCarne', 'ProductoAceite']).withMessage('Tipo de producto no válido')
 ];
 
 const validateProductModificar = [
     param('_id')
         .notEmpty().withMessage('El ID es requerido')
         .isMongoId().withMessage('El ID no es válido'),
-    ...baseProductValidationRules.map(validation => ({
-        ...validation,
-        optional: true
-    })),
-    (req, res, next) => {
-        const tipoProducto = req.body.tipoProducto;
-        let validations = [];
-        
-        if (tipoProducto === 'ProductoCarne') {
-            validations = meatProductValidationRules.map(validation => ({
-                ...validation,
-                optional: true
-            }));
-        } else if (tipoProducto === 'ProductoAceite') {
-            validations = oilProductValidationRules.map(validation => ({
-                ...validation,
-                optional: true
-            }));
-        }
-        
-        Promise.all(validations.map(validation => validation.run(req)))
-            .then(() => next())
-            .catch(error => next(error));
-    }
+    body('codigo').optional().trim().notEmpty().withMessage('El código no puede estar vacío'),
+    body('sku').optional().trim().notEmpty().withMessage('El SKU no puede estar vacío'),
+    body('nombre').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío'),
+    body('categoria').optional().isIn(CategoriaProducto).withMessage('Categoría no válida'),
+    body('estado').optional().isIn(EstadoProducto).withMessage('Estado no válido'),
+    body('tipoProducto').optional().isIn(['ProductoCarne', 'ProductoAceite']).withMessage('Tipo de producto no válido'),
+    
+    // Validaciones específicas para ProductoCarne
+    body('infoCarne.tipoCarne').optional().isIn(TipoCarne).withMessage('Tipo de carne no válido'),
+    body('infoCarne.corte').optional().isIn(CorteVacuno).withMessage('Corte no válido'),
+    body('infoCarne.precioPorKg').optional().isFloat({ min: 0 }).withMessage('El precio por kg debe ser un número positivo'),
+    
+    // Validaciones específicas para ProductoAceite
+    body('infoAceite.tipo').optional().isIn(TipoAceite).withMessage('Tipo de aceite no válido'),
+    body('infoAceite.volumen').optional().isFloat({ min: 0 }).withMessage('El volumen debe ser un número positivo'),
+    body('infoAceite.envase').optional().isIn(TipoEnvase).withMessage('Tipo de envase no válido')
 ];
 
 const validateProductID = [

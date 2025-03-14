@@ -180,7 +180,8 @@ const EsquemaProductoBase = new Schema({
     timestamps: { createdAt: 'fechaCreacion', updatedAt: 'fechaActualizacion' },
     discriminatorKey: 'tipoProducto',
     toJSON: { virtuals: true },
-    toObject: { virtuals: true }
+    toObject: { virtuals: true },
+    id: false // Desactiva la conversión de _id a id
 });
 
 // Meat Product Schema
