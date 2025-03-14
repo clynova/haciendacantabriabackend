@@ -51,8 +51,7 @@ const baseProductValidationRules = [
         .isFloat({ min: 0, max: 100 }).withMessage('El descuento por transferencia debe estar entre 0 y 100'),
 
     body('multimedia.imagenes.*.url')
-        .optional()
-        .isURL().withMessage('La URL de la imagen debe ser válida'),
+        .optional(),
 
     body('multimedia.imagenes.*.esPrincipal')
         .optional()
