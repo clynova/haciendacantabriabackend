@@ -16,6 +16,7 @@ import { paymentProcessingRoutes } from './routes/paymentProcessingRoutes.js';
 import { shippingMethodRoutes } from './routes/shippingMethodRoutes.js';
 import { paymentMethodRoutes } from './routes/paymentMethodRoutes.js';
 import { tagRoutes } from './routes/tagRoutes.js';
+import { utilRoutes } from './routes/utilRoutes.js';
 
 // Configurar rutas
 app.use('/api/user', userRoutes);
@@ -28,6 +29,7 @@ app.use('/api/payments', paymentProcessingRoutes);
 app.use('/api/shipping-methods', shippingMethodRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/tags', tagRoutes);
+app.use('/api/util', utilRoutes);
 
 const PORT = process.env.PORT || 4000;
 
