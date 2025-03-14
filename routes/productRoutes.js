@@ -9,8 +9,9 @@ productRoutes.get('/', products)
 productRoutes.get('/search', findProducts)
 productRoutes.get('/:_id', getProduct)
 productRoutes.post('/', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductRegistration, createProduct)
-productRoutes.put('/:_id', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductModificar, updateProduct)
-productRoutes.delete('/:_id', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductID, deleteProduct);
+
+//productRoutes.put('/:_id', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductModificar, updateProduct)
+//productRoutes.delete('/:_id', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductID, deleteProduct);
 
 
 export { productRoutes }

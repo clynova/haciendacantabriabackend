@@ -8,7 +8,10 @@ conectarDB();
 // Importar rutas
 import { userRoutes } from './routes/userRoutes.js';
 import { productRoutes } from './routes/productRoutes.js';
+
+
 import { cartRoutes } from './routes/cartRoutes.js';
+/*
 import { orderRoutes } from './routes/orderRoutes.js';
 import { reviewRoutes } from './routes/reviewRoutes.js';
 import { wishlistRoutes } from './routes/wishlistRoutes.js';
@@ -18,10 +21,15 @@ import { paymentMethodRoutes } from './routes/paymentMethodRoutes.js';
 import { tagRoutes } from './routes/tagRoutes.js';
 import { utilRoutes } from './routes/utilRoutes.js';
 
+*/
+
 // Configurar rutas
 app.use('/api/user', userRoutes);
 app.use('/api/product', productRoutes);
+
+
 app.use('/api/cart', cartRoutes);
+/*
 app.use('/api/order', orderRoutes);
 app.use('/api/review', reviewRoutes);
 app.use('/api/wishlist', wishlistRoutes);
@@ -30,6 +38,8 @@ app.use('/api/shipping-methods', shippingMethodRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/util', utilRoutes);
+
+*/
 
 const PORT = process.env.PORT || 4000;
 

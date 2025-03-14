@@ -1,10 +1,26 @@
-import { Product } from "../models/Product.js";
+import { ProductoBase, ProductoCarne, ProductoAceite } from "../models/Product.js";
 import { validationResult } from 'express-validator';
 
 const products = async (req, res) => {
     try {
-        const products = await Product.find();
-        res.status(200).send({ success: true, msg: 'Productos enviados', products });
+        const { categoria, tipoProducto } = req.query;
+        const filter = {};
+        
+        if (categoria) {
+            filter.categoria = categoria;
+        }
+        
+        if (tipoProducto) {
+            filter.tipoProducto = tipoProducto;
+        }
+        
+        const products = await ProductoBase.find(filter);
+        res.status(200).send({ 
+            success: true, 
+            msg: 'Productos enviados', 
+            count: products.length,
+            products 
+        });
     } catch (err) {
         console.error(err);
         res.status(500).send({ success: false, msg: "Error al obtener los productos" });
@@ -14,7 +30,7 @@ const products = async (req, res) => {
 const getProduct = async (req, res) => {
     try {
         const { _id } = req.params;
-        const product = await Product.findById(_id);
+        const product = await ProductoBase.findById(_id);
         if (!product) {
             return res.status(404).send({ success: false, msg: "El producto no existe" });
         }
@@ -27,45 +43,52 @@ const getProduct = async (req, res) => {
 
 const createProduct = async (req, res) => {
     try {
-        // Validar errores de entrada
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).send({ success: false, msg: "Errores de validación", errors: errors.array() });
-        }
-        
-        // Validar tags si están presentes
-        if (req.body.tags && !Array.isArray(req.body.tags)) {
             return res.status(400).send({ 
                 success: false, 
-                msg: "El campo 'tags' debe ser un array de strings" 
+                msg: "Errores de validación", 
+                errors: errors.array() 
             });
         }
-        
-        // Procesar tags si existen
-        if (req.body.tags) {
-            req.body.tags = req.body.tags
-                .filter(tag => typeof tag === 'string' && tag.trim().length > 0)
-                .map(tag => tag.trim());
+
+        let ProductModel;
+        switch (req.body.tipoProducto) {
+            case 'ProductoCarne':
+                ProductModel = ProductoCarne;
+                break;
+            case 'ProductoAceite':
+                ProductModel = ProductoAceite;
+                break;
+            default:
+                return res.status(400).send({ 
+                    success: false, 
+                    msg: "Tipo de producto no válido" 
+                });
         }
 
-        // Crear el producto
-        const product = new Product(req.body);
-        const productGuardado = await product.save();
+        const product = new ProductModel(req.body);
+        const savedProduct = await product.save();
 
         res.status(201).send({
             success: true,
             msg: "Producto creado correctamente",
-            data: {
-                _id: productGuardado._id,
-                name: productGuardado.name,
-                description: productGuardado.description,
-                tags: productGuardado.tags
-            }
+            data: savedProduct
         });
 
     } catch (err) {
         console.error(err);
-        res.status(500).send({ success: false, msg: "Error al registrar el producto" });
+        if (err.code === 11000) {
+            res.status(400).send({ 
+                success: false, 
+                msg: "Ya existe un producto con ese código o SKU" 
+            });
+        } else {
+            res.status(500).send({ 
+                success: false, 
+                msg: "Error al registrar el producto" 
+            });
+        }
     }
 };
 
@@ -73,50 +96,64 @@ const updateProduct = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ success: false, msg: "Errores de validación", errors: errors.array() });
+            return res.status(400).send({ 
+                success: false, 
+                msg: "Errores de validación", 
+                errors: errors.array() 
+            });
         }
 
         const { _id } = req.params;
-        const { name, description, price, images, stock, tags } = req.body;
-
-        const product = await Product.findById(_id);
-        if (!product) {
-            return res.status(404).json({ success: false, msg: "Producto no encontrado" });
+        
+        // First find the product to get its type
+        const existingProduct = await ProductoBase.findById(_id);
+        if (!existingProduct) {
+            return res.status(404).send({ 
+                success: false, 
+                msg: "Producto no encontrado" 
+            });
         }
 
-        if (name) product.name = name;
-        if (description) product.description = description;
-        if (price) product.price = price;
-        if (images) product.images = images;
-        if (stock !== undefined) product.stock = stock;
-        
-        // Gestión de etiquetas
-        if (tags) {
-            if (!Array.isArray(tags)) {
-                return res.status(400).json({ 
-                    success: false, 
-                    msg: "El campo 'tags' debe ser un array de strings" 
-                });
+        // If trying to change product type, prevent it
+        if (req.body.tipoProducto && req.body.tipoProducto !== existingProduct.tipoProducto) {
+            return res.status(400).send({ 
+                success: false, 
+                msg: "No se puede cambiar el tipo de producto" 
+            });
+        }
+
+        // Update the product
+        const updatedProduct = await ProductoBase.findByIdAndUpdate(
+            _id,
+            { 
+                ...req.body,
+                fechaActualizacion: new Date()
+            },
+            { 
+                new: true,
+                runValidators: true
             }
-            
-            // Procesar tags
-            product.tags = tags
-                .filter(tag => typeof tag === 'string' && tag.trim().length > 0)
-                .map(tag => tag.trim());
-        }
-        
-        product.updatedAt = new Date();
-        await product.save()
+        );
 
-        res.status(200).json({
+        res.status(200).send({
             success: true,
             msg: "Producto modificado correctamente",
-            data: product
+            data: updatedProduct
         });
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ success: false, msg: "Error al modificar el producto" });
+        if (err.code === 11000) {
+            res.status(400).send({ 
+                success: false, 
+                msg: "Ya existe un producto con ese código o SKU" 
+            });
+        } else {
+            res.status(500).send({ 
+                success: false, 
+                msg: "Error al modificar el producto" 
+            });
+        }
     }
 };
 
@@ -124,64 +161,91 @@ const deleteProduct = async (req, res) => {
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
-            return res.status(400).json({ success: false, msg: "Errores de validación", errors: errors.array() });
+            return res.status(400).send({ 
+                success: false, 
+                msg: "Errores de validación", 
+                errors: errors.array() 
+            });
         }
 
-        const { _id } = req.params; // Obtener el ID desde la URL
-
-        // Buscar y eliminar el producto
-        const product = await Product.findByIdAndDelete(_id);
+        const { _id } = req.params;
+        const product = await ProductoBase.findByIdAndDelete(_id);
 
         if (!product) {
-            return res.status(404).json({ success: false, msg: "Producto no encontrado" });
+            return res.status(404).send({ 
+                success: false, 
+                msg: "Producto no encontrado" 
+            });
         }
 
-        res.status(200).json({
+        res.status(200).send({
             success: true,
             msg: "Producto eliminado correctamente",
             data: {
                 _id: product._id,
-                name: product.name
+                nombre: product.nombre,
+                tipoProducto: product.tipoProducto
             }
         });
 
     } catch (err) {
         console.error(err);
-        res.status(500).json({ success: false, msg: "Error interno al eliminar el producto" });
+        res.status(500).send({ 
+            success: false, 
+            msg: "Error interno al eliminar el producto" 
+        });
     }
 };
 
-/**
- * Buscar productos por filtros avanzados incluyendo etiquetas
- */
 const findProducts = async (req, res) => {
     try {
-        const { name, minPrice, maxPrice, tags } = req.query;
+        const { 
+            nombre, 
+            categoria,
+            tipoProducto,
+            precioMin, 
+            precioMax,
+            tipoCarne,
+            corte,
+            tipoAceite
+        } = req.query;
         
-        // Construir el objeto de filtro
         const filter = {};
         
-        if (name) {
-            filter.name = { $regex: name, $options: 'i' };
+        // Base filters
+        if (nombre) {
+            filter.nombre = { $regex: nombre, $options: 'i' };
         }
-        
-        if (minPrice !== undefined || maxPrice !== undefined) {
-            filter.price = {};
-            if (minPrice !== undefined) {
-                filter.price.$gte = Number(minPrice);
+        if (categoria) {
+            filter.categoria = categoria;
+        }
+        if (tipoProducto) {
+            filter.tipoProducto = tipoProducto;
+        }
+        if (precioMin !== undefined || precioMax !== undefined) {
+            filter['precios.base'] = {};
+            if (precioMin !== undefined) {
+                filter['precios.base'].$gte = Number(precioMin);
             }
-            if (maxPrice !== undefined) {
-                filter.price.$lte = Number(maxPrice);
+            if (precioMax !== undefined) {
+                filter['precios.base'].$lte = Number(precioMax);
             }
         }
         
-        // Filtrar por etiquetas si se proporcionan
-        if (tags) {
-            const tagArray = Array.isArray(tags) ? tags : tags.split(',');
-            filter.tags = { $in: tagArray };
+        // Meat specific filters
+        if (tipoCarne) {
+            filter['infoCarne.tipoCarne'] = tipoCarne;
+        }
+        if (corte) {
+            filter['infoCarne.corte'] = corte;
         }
         
-        const products = await Product.find(filter);
+        // Oil specific filters
+        if (tipoAceite) {
+            filter['infoAceite.tipo'] = tipoAceite;
+        }
+        
+        const products = await ProductoBase.find(filter);
         
         res.status(200).send({
             success: true,
@@ -199,4 +263,4 @@ const findProducts = async (req, res) => {
     }
 };
 
-export { products, getProduct, createProduct, updateProduct, deleteProduct, findProducts }
+export { products, getProduct, createProduct, updateProduct, deleteProduct, findProducts };

@@ -1,20 +1,439 @@
 import mongoose from "mongoose";
+const { Schema, model } = mongoose;
 
-const productSchema = new mongoose.Schema(
-    {
-        name: { type: String, required: true, trim: true },
-        description: { type: String, required: true, trim: true },
-        price: { type: Number, required: true },
-        images: [{ type: String, trim: true }],
-        stock: { type: Number, default: 0 },
-        tags: [{ type: String, trim: true }] // Array de etiquetas para categorización multidimensional
+// Enums
+const EstadoProducto = ['ACTIVO', 'INACTIVO', 'SIN_STOCK', 'PROXIMAMENTE'];
+const CategoriaProducto = ['CARNE', 'ACEITE', 'CONDIMENTO', 'ACCESORIO'];
+const TipoCarne = ['VACUNO', 'CERDO', 'POLLO', 'CORDERO', 'PAVO'];
+const CorteVacuno = [
+    // Cortes Argentinos
+    'BIFE_ANCHO', 'BIFE_ANGOSTO', 'BIFE_DE_PALETA', 'BIFE_DE_VACIO',
+    'BOLA_DE_LOMO', 'BRAZUELO', 'CARNAZA_DE_CUADRADA', 'CARNAZA_PALETA',
+    'CHINGOLO', 'COGOTE', 'COLITA_DE_CUADRIL', 'CORAZON_DE_CUADRIL',
+    'ENTRAÑA_FINA', 'FALDA_DESHUESADA', 'GARRON', 'HUACHALOMO',
+    'LOMO', 'MARUCHA', 'NALGA_DE_ADENTRO', 'PECETO',
+    'PECHO', 'SOBRECOSTILLA', 'TAPA_DE_BIFE_ANCHO', 'TAPA_DE_CUADRIL',
+    'TORTUGUITA', 'VACIO',
+
+    // Cortes Chilenos
+    'LOMO_VETADO', 'LOMO_LISO', 'ASADO_DEL_CARNICERO', 'PALANCA',
+    'POSTA_ROSADA', 'OSOBUCO_DE_MANO', 'GANSO', 'POSTA_DE_PALETA',
+    'CHOCLILLO', 'PUNTA_PICANA', 'ASIENTO', 'ENTRAÑA',
+    'ALETILLA', 'OSOBUCO_DE_PIERNA', 'FILETE', 'PUNTA_DE_PALETA',
+    'POSTA_NEGRA', 'POLLO_DE_GANSO', 'TAPAPECHO', 'PLATEADA',
+    'PUNTA_DE_GANSO', 'ABASTERO', 'TAPABARRIGA',
+
+    // Adicionales para carne molida
+    'MOLIDA_ESPECIAL', 'MOLIDA_CORRIENTE'
+];
+
+const TipoAceite = ['MARAVILLA', 'OLIVA', 'CANOLA', 'MIXTO'];
+const MetodoCoccion = ['PARRILLA', 'SARTEN', 'HORNO', 'COCCION_LENTA', 'SOUS_VIDE', 'GUISO'];
+const TipoEnvase = ['VACIO', 'CAJA', 'BOTELLA', 'BIDON', 'BOLSA'];
+
+// Base Product Schema
+const EsquemaProductoBase = new Schema({
+    codigo: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true,
+        index: true
     },
-    { timestamps: true } // Agrega automáticamente createdAt y updatedAt
-);
+    sku: {
+        type: String,
+        required: true,
+        unique: true,
+        trim: true
+    },
+    nombre: {
+        type: String,
+        required: true,
+        trim: true
+    },
+    slug: {
+        type: String,
+        required: true,
+        unique: true,
+        lowercase: true,
+        trim: true
+    },
+    categoria: {
+        type: String,
+        enum: CategoriaProducto,
+        required: true
+    },
+    estado: {
+        type: String,
+        enum: EstadoProducto,
+        default: 'ACTIVO'
+    },
+    destacado: {
+        type: Boolean,
+        default: false
+    },
+    descripcion: {
+        corta: {
+            type: String,
+            maxlength: 160
+        },
+        completa: {
+            type: String
+        }
+    },
+    precios: {
+        base: {
+            type: Number,
+            required: true,
+            min: 0
+        },
+        descuentos: {
+            regular: {
+                type: Number,
+                default: 0,
+                min: 0,
+                max: 100
+            },
+            transferencia: {
+                type: Number,
+                default: 0,
+                min: 0,
+                max: 100
+            },
+            promocion: {
+                porcentaje: {
+                    type: Number,
+                    default: 0,
+                    min: 0,
+                    max: 100
+                },
+                fechaInicio: Date,
+                fechaFin: Date,
+                activa: {
+                    type: Boolean,
+                    default: false
+                },
+                nombre: String
+            }
+        }
+    },
+    multimedia: {
+        imagenes: [{
+            url: {
+                type: String,
+                required: true
+            },
+            textoAlternativo: String,
+            esPrincipal: {
+                type: Boolean,
+                default: false
+            }
+        }],
+        video: String
+    },
+    seo: {
+        metaTitulo: String,
+        metaDescripcion: {
+            type: String,
+            maxlength: 160
+        },
+        palabrasClave: [String]
+    },
+    infoAdicional: {
+        origen: String,
+        marca: String,
+        certificaciones: [String]
+    },
+    conservacion: {
+        requiereRefrigeracion: {
+            type: Boolean,
+            default: false
+        },
+        requiereCongelacion: {
+            type: Boolean,
+            default: false
+        },
+        vidaUtil: String,
+        instrucciones: String
+    },
+    metadatos: {
+        type: Map,
+        of: Schema.Types.Mixed
+    },
+    relacionados: {
+        productosSimilares: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Producto'
+        }],
+        productosComplementarios: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Producto'
+        }],
+        compradosJuntos: [{
+            type: Schema.Types.ObjectId,
+            ref: 'Producto'
+        }]
+    },
+    fechaCreacion: { type: Date, default: Date.now },
+    fechaActualizacion: { type: Date, default: Date.now }
+}, {
+    timestamps: { createdAt: 'fechaCreacion', updatedAt: 'fechaActualizacion' },
+    discriminatorKey: 'tipoProducto',
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
+});
 
-// Añadir índice para mejorar el rendimiento en búsquedas por etiquetas
-productSchema.index({ tags: 1 });
+// Meat Product Schema
+const EsquemaProductoCarne = new Schema({
+    infoCarne: {
+        tipoCarne: {
+            type: String,
+            enum: TipoCarne,
+            required: true
+        },
+        corte: {
+            type: String,
+            enum: CorteVacuno
+        },
+        nombreArgentino: String,
+        nombreChileno: String,
+        precioPorKg: {
+            type: Number,
+            required: true,
+            min: 0
+        }
+    },
+    caracteristicas: {
+        porcentajeGrasa: {
+            type: Number,
+            min: 0,
+            max: 100
+        },
+        marmoleo: {
+            type: Number,
+            min: 1,
+            max: 5
+        },
+        color: String,
+        textura: [String]
+    },
+    infoNutricional: {
+        porcion: String,
+        calorias: Number,
+        proteinas: Number,
+        grasaTotal: Number,
+        grasaSaturada: Number,
+        colesterol: Number,
+        sodio: Number,
+        carbohidratos: Number
+    },
+    coccion: {
+        metodos: [{
+            type: String,
+            enum: MetodoCoccion
+        }],
+        temperaturaIdeal: String,
+        tiempoEstimado: String,
+        consejos: [String],
+        recetas: [{
+            nombre: String,
+            url: String,
+            descripcion: String
+        }]
+    },
+    opcionesPeso: {
+        esPesoVariable: {
+            type: Boolean,
+            default: true
+        },
+        pesoPromedio: Number,
+        pesoMinimo: Number,
+        pesoMaximo: Number,
+        pesosEstandar: [{
+            peso: Number,
+            unidad: {
+                type: String,
+                enum: ['g', 'kg'],
+                default: 'g'
+            },
+            esPredeterminado: {
+                type: Boolean,
+                default: false
+            },
+            precio: Number,
+            sku: String
+        }],
+        rangosPreferidos: [{
+            nombre: String,
+            pesoMinimo: {
+                type: Number,
+                required: true
+            },
+            pesoMaximo: {
+                type: Number,
+                required: true
+            },
+            descripcion: String,
+            esPredeterminado: {
+                type: Boolean,
+                default: false
+            }
+        }]
+    },
+    empaque: {
+        tipo: {
+            type: String,
+            enum: TipoEnvase,
+            default: 'VACIO'
+        },
+        unidadesPorCaja: Number,
+        pesoCaja: Number
+    },
+    origen: {
+        pais: String,
+        region: String,
+        productor: String,
+        raza: String,
+        maduracion: String
+    },
+    procesamiento: {
+        fechaFaenado: Date,
+        fechaEnvasado: Date,
+        fechaVencimiento: Date,
+        numeroLote: String
+    },
+    inventario: {
+        stockKg: {
+            type: Number,
+            required: true,
+            min: 0
+        },
+        stockUnidades: {
+            type: Number,
+            min: 0
+        },
+        umbralStockBajo: {
+            type: Number,
+            default: 5
+        },
+        ultimaActualizacion: {
+            type: Date,
+            default: Date.now
+        }
+    }
+});
 
-const Product = mongoose.model("Product", productSchema);
+// Oil Product Schema
+const EsquemaProductoAceite = new Schema({
+    infoAceite: {
+        tipo: {
+            type: String,
+            enum: TipoAceite,
+            required: true
+        },
+        volumen: {
+            type: Number,
+            required: true
+        },
+        envase: {
+            type: String,
+            enum: TipoEnvase
+        }
+    },
+    caracteristicas: {
+        aditivos: [String],
+        filtracion: String,
+        acidez: String,
+        extraccion: String
+    },
+    infoNutricional: {
+        porcion: String,
+        calorias: Number,
+        grasaTotal: Number,
+        grasaSaturada: Number,
+        grasaTrans: Number,
+        grasaPoliinsaturada: Number,
+        grasaMonoinsaturada: Number
+    },
+    usosRecomendados: [String],
+    produccion: {
+        metodo: String,
+        temperatura: String,
+        fechaEnvasado: Date,
+        fechaVencimiento: Date
+    },
+    opcionesVolumen: [{
+        volumen: Number,
+        esPredeterminado: {
+            type: Boolean,
+            default: false
+        },
+        precio: Number,
+        sku: String
+    }],
+    inventario: {
+        stockUnidades: {
+            type: Number,
+            required: true,
+            min: 0
+        },
+        umbralStockBajo: {
+            type: Number,
+            default: 10
+        },
+        ultimaActualizacion: {
+            type: Date,
+            default: Date.now
+        }
+    }
+});
 
-export { Product };
+// Virtuals
+EsquemaProductoBase.virtual('precioFinal').get(function () {
+    const precioBase = this.precios.base;
+    const descuentoRegular = this.precios.descuentos.regular || 0;
+    return precioBase * (1 - (descuentoRegular / 100));
+});
+
+EsquemaProductoBase.virtual('precioTransferencia').get(function () {
+    const precioBase = this.precios.base;
+    const descuentoRegular = this.precios.descuentos.regular || 0;
+    const descuentoTransferencia = this.precios.descuentos.transferencia || 0;
+    return precioBase * (1 - ((descuentoRegular + descuentoTransferencia) / 100));
+});
+
+EsquemaProductoCarne.virtual('precioPorKgFinal').get(function () {
+    const precioPorKg = this.infoCarne.precioPorKg;
+    const descuentoRegular = this.precios.descuentos.regular || 0;
+    return precioPorKg * (1 - (descuentoRegular / 100));
+});
+
+EsquemaProductoCarne.virtual('precioPorKgTransferencia').get(function () {
+    const precioPorKg = this.infoCarne.precioPorKg;
+    const descuentoRegular = this.precios.descuentos.regular || 0;
+    const descuentoTransferencia = this.precios.descuentos.transferencia || 0;
+    return precioPorKg * (1 - ((descuentoRegular + descuentoTransferencia) / 100));
+});
+
+// Middleware
+EsquemaProductoBase.pre('save', function (next) {
+    this.fechaActualizacion = new Date();
+    next();
+});
+
+EsquemaProductoBase.pre('save', function (next) {
+    if (!this.slug) {
+        this.slug = this.nombre
+            .toLowerCase()
+            .replace(/[^\w ]+/g, '')
+            .replace(/ +/g, '-');
+    }
+    next();
+});
+
+// Models
+const ProductoBase = mongoose.model('Producto', EsquemaProductoBase);
+const ProductoCarne = ProductoBase.discriminator('ProductoCarne', EsquemaProductoCarne);
+const ProductoAceite = ProductoBase.discriminator('ProductoAceite', EsquemaProductoAceite);
+
+export { ProductoBase, ProductoCarne, ProductoAceite, EstadoProducto, CategoriaProducto, TipoCarne, CorteVacuno, TipoAceite, MetodoCoccion, TipoEnvase };

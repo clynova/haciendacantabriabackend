@@ -63,9 +63,6 @@ app.get('/', async (req, res) => {
   }
 });
 
-// Rutas
-
-
 app.use((err, req, res, next) => {
   errorHandler(err, req, res, next);
 });
