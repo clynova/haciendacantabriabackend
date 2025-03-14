@@ -1,5 +1,5 @@
 import { Cart } from '../models/Cart.js';
-import { Product } from "../models/Product.js";
+import { ProductoBase } from "../models/Product.js";
 import mongoose from 'mongoose';
 
 const addToCart = async (req, res) => {
@@ -17,10 +17,22 @@ const addToCart = async (req, res) => {
             return res.status(400).json({ success: false, msg: "Cantidad inválida" });
         }
 
-        // Verificar si el producto existe
-        const product = await Product.findById(productId);
+        // Verificar si el producto existe y está activo
+        const product = await ProductoBase.findById(productId);
         if (!product) {
             return res.status(404).json({ success: false, msg: "Producto no encontrado" });
+        }
+
+        // Verificar si el producto está activo
+        if (product.estado !== 'ACTIVO') {
+            return res.status(400).json({ success: false, msg: "Este producto no está disponible actualmente" });
+        }
+
+        // Verificar stock según el tipo de producto
+        if (product.tipoProducto === 'ProductoCarne' && product.inventario.stockKg < 0) {
+            return res.status(400).json({ success: false, msg: "Producto sin stock disponible" });
+        } else if (product.tipoProducto === 'ProductoAceite' && product.inventario.stockUnidades < quantity) {
+            return res.status(400).json({ success: false, msg: "Stock insuficiente" });
         }
 
         // Buscar el carrito del usuario
@@ -167,13 +179,31 @@ const loadCart = async (req, res) => {
     try {
         const userId = req.user._id;
 
-        let cart = await Cart.findOne({ userId });
+        let cart = await Cart.findOne({ userId })
+            .populate({
+                path: 'products.productId',
+                model: ProductoBase,
+                select: 'nombre codigo sku categoria estado precios multimedia tipoProducto infoCarne infoAceite'
+            });
 
         if (!cart) {
             return res.status(400).json({ success: false, msg: "El carrito está vacío" });
         }
 
-        res.status(200).json({ success: true, cart, msg: "Se envio correctamente el carrito" });
+        // Filtrar productos que ya no están activos o disponibles
+        cart.products = cart.products.filter(item => 
+            item.productId && item.productId.estado === 'ACTIVO'
+        );
+
+        // Si se eliminaron productos, actualizar el carrito
+        if (cart.products.length === 0) {
+            await Cart.findByIdAndDelete(cart._id);
+            return res.status(400).json({ success: false, msg: "El carrito está vacío" });
+        }
+
+        await cart.save();
+
+        res.status(200).json({ success: true, cart, msg: "Se envió correctamente el carrito" });
 
     } catch (err) {
         console.error("Error al enviar el carrito de compras del usuario: ", err);
