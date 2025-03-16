@@ -1,5 +1,5 @@
 import { Review } from "../models/Review.js";
-import { Product } from "../models/Product.js";
+import { ProductoBase } from "../models/Product.js";
 import { User } from "../models/User.js";
 import { validationResult } from 'express-validator';
 
@@ -50,7 +50,7 @@ const createReview = async (req, res) => {
 
         const { productId, userId, rating, comment } = req.body;
 
-        const product = await Product.findById(productId);
+        const product = await ProductoBase.findById(productId);
         if (!product) {
             return res.status(404).send({ success: false, msg: "El producto no existe" });
         }

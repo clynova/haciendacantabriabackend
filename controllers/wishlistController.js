@@ -1,9 +1,13 @@
 import { Wishlist } from '../models/Wishlist.js';
+import { ProductoBase } from '../models/Product.js';
 import { validationResult } from 'express-validator';
 
 const getWishlist = async (req, res) => {
     try {
-        const wishlist = await Wishlist.findOne({ userId: req.user._id }).populate('products');
+        const wishlist = await Wishlist.findOne({ userId: req.user._id }).populate({
+            path: 'products',
+            model: ProductoBase
+        });
         res.status(200).json({
             success: true,
             msg: 'Wishlist recuperada exitosamente',
