@@ -174,6 +174,7 @@ const EsquemaProductoBase = new Schema({
             ref: 'Producto'
         }]
     },
+    tags: [{ type: String, trim: true }],
     fechaCreacion: { type: Date, default: Date.now },
     fechaActualizacion: { type: Date, default: Date.now }
 }, {
