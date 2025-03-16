@@ -1,7 +1,7 @@
 import { Order } from '../models/Order.js';
 import { OrderDetail } from '../models/OrderDetail.js';
 import { Cart } from '../models/Cart.js';
-import { Product } from '../models/Product.js';
+import { ProductoBase } from '../models/Product.js';
 import { User } from '../models/User.js';
 import { validationResult } from 'express-validator';
 import { ShippingMethod } from "../models/ShippingMethod.js";
@@ -71,17 +71,43 @@ const createOrder = async (req, res) => {
         let totalWeight = 0;
 
         for (const item of cart.products) {
-            const product = await Product.findById(item.productId);
-            if (!product) {
+            const producto = await ProductoBase.findById(item.productId);
+            if (!producto) {
                 return res.status(404).json({ success: false, msg: `Producto no encontrado: ${item.productId}` });
             }
-            if (product.stock < item.quantity) {
-                return res.status(400).json({ success: false, msg: `Stock insuficiente para el producto: ${product.name}` });
-            }
-            subtotal += product.price * item.quantity;
 
-            if (product.weight) {
-                totalWeight += product.weight * item.quantity;
+            // Verificar stock según el tipo de producto
+            if (producto.tipoProducto === 'ProductoCarne') {
+                // Para productos de carne, verificamos el stock en kg
+                if (producto.inventario.stockKg < item.quantity) {
+                    return res.status(400).json({ success: false, msg: `Stock insuficiente para el producto: ${producto.nombre}` });
+                }
+            } else if (producto.tipoProducto === 'ProductoAceite') {
+                // Para productos de aceite, verificamos el stock en unidades
+                if (producto.inventario.stockUnidades < item.quantity) {
+                    return res.status(400).json({ success: false, msg: `Stock insuficiente para el producto: ${producto.nombre}` });
+                }
+            } else {
+                // Para otros tipos de productos, verificamos usando el campo que corresponda
+                if ((producto.inventario && producto.inventario.stockUnidades < item.quantity) || producto.estado === 'SIN_STOCK') {
+                    return res.status(400).json({ success: false, msg: `Stock insuficiente para el producto: ${producto.nombre}` });
+                }
+            }
+
+            // Calcular precio según el tipo de producto
+            let precioUnitario = producto.precios.base;
+            
+            // Aplicar descuentos si hay
+            if (producto.precios.descuentos && producto.precios.descuentos.regular > 0) {
+                const descuento = producto.precios.descuentos.regular / 100;
+                precioUnitario = precioUnitario * (1 - descuento);
+            }
+            
+            subtotal += precioUnitario * item.quantity;
+
+            // Calcular peso total si el producto tiene peso
+            if (producto.tipoProducto === 'ProductoCarne' && producto.opcionesPeso && producto.opcionesPeso.pesoPromedio) {
+                totalWeight += (producto.opcionesPeso.pesoPromedio / 1000) * item.quantity; // Convertir a kg si está en gramos
             }
         }
 
@@ -143,12 +169,22 @@ const createOrder = async (req, res) => {
 
         for (const item of cart.products) {
             try {
-                const product = await Product.findById(item.productId);
+                const producto = await ProductoBase.findById(item.productId);
+                
+                // Calcular precio según el tipo de producto
+                let precioUnitario = producto.precios.base;
+                
+                // Aplicar descuentos si hay
+                if (producto.precios.descuentos && producto.precios.descuentos.regular > 0) {
+                    const descuento = producto.precios.descuentos.regular / 100;
+                    precioUnitario = precioUnitario * (1 - descuento);
+                }
+                
                 const orderDetail = new OrderDetail({
                     orderId: order._id,
                     productId: item.productId,
                     quantity: item.quantity,
-                    price: product.price, // Precio al momento de la compra
+                    price: precioUnitario, // Precio al momento de la compra
                 });
                 await orderDetail.save();
             } catch (err) {
@@ -158,7 +194,28 @@ const createOrder = async (req, res) => {
 
         // Reducir el stock de los productos vendidos
         for (const item of cart.products) {
-            await Product.findByIdAndUpdate(item.productId, { $inc: { stock: -item.quantity } });
+            const producto = await ProductoBase.findById(item.productId);
+            
+            // Actualizar stock según el tipo de producto
+            if (producto.tipoProducto === 'ProductoCarne') {
+                await ProductoBase.findByIdAndUpdate(item.productId, { $inc: { 'inventario.stockKg': -item.quantity } });
+            } else if (producto.tipoProducto === 'ProductoAceite') {
+                await ProductoBase.findByIdAndUpdate(item.productId, { $inc: { 'inventario.stockUnidades': -item.quantity } });
+            } else {
+                // Para otros tipos de productos
+                if (producto.inventario && producto.inventario.stockUnidades !== undefined) {
+                    await ProductoBase.findByIdAndUpdate(item.productId, { $inc: { 'inventario.stockUnidades': -item.quantity } });
+                }
+            }
+            
+            // Verificar si se debe cambiar el estado a SIN_STOCK
+            if (producto.tipoProducto === 'ProductoCarne' && producto.inventario.stockKg - item.quantity <= 0) {
+                await ProductoBase.findByIdAndUpdate(item.productId, { estado: 'SIN_STOCK' });
+            } else if (producto.tipoProducto === 'ProductoAceite' && producto.inventario.stockUnidades - item.quantity <= 0) {
+                await ProductoBase.findByIdAndUpdate(item.productId, { estado: 'SIN_STOCK' });
+            } else if (producto.inventario && producto.inventario.stockUnidades - item.quantity <= 0) {
+                await ProductoBase.findByIdAndUpdate(item.productId, { estado: 'SIN_STOCK' });
+            }
         }
 
         // Vaciar el carrito del usuario
@@ -203,7 +260,10 @@ const getUserOrders = async (req, res) => {
         // Obtener los detalles de los productos para cada orden
         const ordersWithDetails = await Promise.all(
             orders.map(async (order) => {
-                const orderDetails = await OrderDetail.find({ orderId: order._id }).populate('productId');
+                const orderDetails = await OrderDetail.find({ orderId: order._id }).populate({
+                    path: 'productId',
+                    model: 'Producto' // Actualizado para usar el nuevo nombre del modelo
+                });
                 return {
                     ...order.toObject(), // Convertir el documento de Mongoose a un objeto plano
                     products: orderDetails.map(detail => ({
@@ -256,7 +316,10 @@ const getOrder = async (req, res) => {
         }
         
         // Obtener detalles de la orden
-        const orderDetails = await OrderDetail.find({ orderId: order._id }).populate('productId');
+        const orderDetails = await OrderDetail.find({ orderId: order._id }).populate({
+            path: 'productId',
+            model: 'Producto' // Actualizado para usar el nuevo nombre del modelo
+        });
         const responseOrder = {
             ...order.toObject(),
             products: orderDetails.map(detail => ({
