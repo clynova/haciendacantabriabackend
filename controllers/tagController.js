@@ -1,4 +1,4 @@
-import { Product } from "../models/Product.js";
+import { ProductoBase } from "../models/Product.js";
 import { validationResult } from 'express-validator';
 
 /**
@@ -7,7 +7,7 @@ import { validationResult } from 'express-validator';
 const getAllTags = async (req, res) => {
     try {
         // Encuentra todas las etiquetas únicas en la colección de productos
-        const allProducts = await Product.find({}, 'tags');
+        const allProducts = await ProductoBase.find({}, 'tags');
 
         // Extrae y aplana las etiquetas de todos los productos
         const allTags = allProducts.reduce((tags, product) => {
@@ -38,7 +38,7 @@ const getProductTags = async (req, res) => {
     try {
         const { productId } = req.params;
 
-        const product = await Product.findById(productId);
+        const product = await ProductoBase.findById(productId);
         if (!product) {
             return res.status(404).send({
                 success: false,
@@ -46,10 +46,13 @@ const getProductTags = async (req, res) => {
             });
         }
 
+        // Obtener las etiquetas del producto
+        const tags = product.tags || [];
+
         res.status(200).send({
             success: true,
             msg: 'Etiquetas del producto enviadas',
-            tags: product.tags || []
+            tags
         });
     } catch (err) {
         console.error(err);
@@ -88,7 +91,7 @@ const addTagsToProduct = async (req, res) => {
         const validTags = tags.filter(tag => typeof tag === 'string' && tag.trim().length > 0)
             .map(tag => tag.trim());
 
-        const product = await Product.findById(productId);
+        const product = await ProductoBase.findById(productId);
         if (!product) {
             return res.status(404).send({
                 success: false,
@@ -96,7 +99,7 @@ const addTagsToProduct = async (req, res) => {
             });
         }
 
-        // Asegurar que product.tags es un array
+        // Inicializar tags si no existen
         if (!product.tags) {
             product.tags = [];
         }
@@ -105,6 +108,7 @@ const addTagsToProduct = async (req, res) => {
         const newTags = validTags.filter(tag => !product.tags.includes(tag));
         product.tags = [...product.tags, ...newTags];
 
+        // Guardar el producto
         await product.save();
 
         res.status(200).send({
@@ -153,7 +157,7 @@ const updateProductTags = async (req, res) => {
         const validTags = tags.filter(tag => typeof tag === 'string' && tag.trim().length > 0)
             .map(tag => tag.trim());
 
-        const product = await Product.findById(productId);
+        const product = await ProductoBase.findById(productId);
         if (!product) {
             return res.status(404).send({
                 success: false,
@@ -207,7 +211,7 @@ const removeTagsFromProduct = async (req, res) => {
             });
         }
 
-        const product = await Product.findById(productId);
+        const product = await ProductoBase.findById(productId);
         if (!product) {
             return res.status(404).send({
                 success: false,
@@ -215,8 +219,22 @@ const removeTagsFromProduct = async (req, res) => {
             });
         }
 
+        // Verificar si existen etiquetas
+        if (!product.tags || product.tags.length === 0) {
+            return res.status(200).send({
+                success: true,
+                msg: "El producto no tiene etiquetas para eliminar",
+                data: {
+                    productId: product._id,
+                    tags: []
+                }
+            });
+        }
+
         // Eliminar las etiquetas especificadas
-        product.tags = (product.tags || []).filter(tag => !tags.includes(tag));
+        product.tags = product.tags.filter(tag => !tags.includes(tag));
+        
+        // Guardar el producto
         await product.save();
 
         res.status(200).send({
@@ -242,7 +260,7 @@ const removeTagsFromProduct = async (req, res) => {
  */
 const findProductsByTags = async (req, res) => {
     try {
-        const { tags, matchAll = 'true', page = 1, limit = 10 } = req.query;
+        const { tags, matchAll = 'true', page = 1, limit = 10, exact = 'false' } = req.query;
 
         if (!tags) {
             return res.status(400).send({
@@ -254,16 +272,6 @@ const findProductsByTags = async (req, res) => {
         // Convertir a array si viene como string
         const tagArray = Array.isArray(tags) ? tags : tags.split(',');
 
-        let query;
-        // Determina el tipo de búsqueda según el parámetro matchAll
-        if (matchAll === 'true') {
-            // Buscar productos que contengan TODAS las etiquetas especificadas
-            query = { tags: { $all: tagArray } };
-        } else {
-            // Buscar productos que contengan AL MENOS UNA de las etiquetas
-            query = { tags: { $in: tagArray } };
-        }
-
         // Convertir page y limit a números
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
@@ -271,29 +279,79 @@ const findProductsByTags = async (req, res) => {
         // Calcular el número de documentos a omitir
         const skip = (pageNum - 1) * limitNum;
         
-        // Obtener el total de productos que coinciden con la consulta
-        const totalProducts = await Product.countDocuments(query);
+        // Construir la consulta
+        let query = {};
         
-        // Obtener los productos para la página actual
-        const products = await Product.find(query)
-            .skip(skip)
-            .limit(limitNum);
-
-        res.status(200).send({
-            success: true,
-            msg: matchAll === 'true' ?
-                "Productos que coinciden con todas las etiquetas" :
-                "Productos que coinciden con al menos una etiqueta",
-            pagination: {
-                total: totalProducts,
-                page: pageNum,
-                limit: limitNum,
-                totalPages: Math.ceil(totalProducts / limitNum)
-            },
-            count: products.length,
-            products
-        });
-
+        if (exact === 'true') {
+            // Búsqueda exacta: el array de tags debe tener exactamente los mismos elementos
+            // Para esto, necesitamos recuperar todos los productos y filtrar manualmente
+            const allProducts = await ProductoBase.find();
+            
+            const filteredProducts = allProducts.filter(product => {
+                // Verificar si el producto tiene tags
+                if (!product.tags || !Array.isArray(product.tags)) {
+                    return false;
+                }
+                
+                // Para que sea exacto:
+                // 1. Debe tener la misma cantidad de tags
+                if (product.tags.length !== tagArray.length) {
+                    return false;
+                }
+                
+                // 2. Todos los tags solicitados deben estar presentes
+                const hasAllTags = tagArray.every(tag => product.tags.includes(tag));
+                
+                return hasAllTags;
+            });
+            
+            // Aplicar paginación manualmente
+            const totalProducts = filteredProducts.length;
+            const paginatedProducts = filteredProducts.slice(skip, skip + limitNum);
+            
+            return res.status(200).send({
+                success: true,
+                msg: "Productos con exactamente las mismas etiquetas",
+                pagination: {
+                    total: totalProducts,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(totalProducts / limitNum)
+                },
+                count: paginatedProducts.length,
+                products: paginatedProducts
+            });
+        } else {
+            // Búsqueda normal con $all o $in
+            if (matchAll === 'true') {
+                // Todos los tags deben estar presentes (AND)
+                query = { tags: { $all: tagArray } };
+            } else {
+                // Al menos un tag debe estar presente (OR)
+                query = { tags: { $in: tagArray } };
+            }
+            
+            // Ejecutar la consulta con paginación
+            const totalProducts = await ProductoBase.countDocuments(query);
+            const products = await ProductoBase.find(query)
+                .skip(skip)
+                .limit(limitNum);
+    
+            res.status(200).send({
+                success: true,
+                msg: matchAll === 'true' ?
+                    "Productos que coinciden con todas las etiquetas" :
+                    "Productos que coinciden con al menos una etiqueta",
+                pagination: {
+                    total: totalProducts,
+                    page: pageNum,
+                    limit: limitNum,
+                    totalPages: Math.ceil(totalProducts / limitNum)
+                },
+                count: products.length,
+                products
+            });
+        }
     } catch (err) {
         console.error(err);
         res.status(500).send({
@@ -308,7 +366,7 @@ const findProductsByTags = async (req, res) => {
  */
 const findAllProductsByTags = async (req, res) => {
     try {
-        const { tags, matchAll = 'true', limit = 10 } = req.query;
+        const { tags, matchAll = 'true', limit = 10, exact = 'false' } = req.query;
 
         if (!tags) {
             return res.status(400).send({
@@ -319,32 +377,61 @@ const findAllProductsByTags = async (req, res) => {
 
         // Convertir a array si viene como string
         const tagArray = Array.isArray(tags) ? tags : tags.split(',');
-
-        let query;
-        // Determina el tipo de búsqueda según el parámetro matchAll
-        if (matchAll === 'true') {
-            // Buscar productos que contengan TODAS las etiquetas especificadas
-            query = { tags: { $all: tagArray } };
-        } else {
-            // Buscar productos que contengan AL MENOS UNA de las etiquetas
-            query = { tags: { $in: tagArray } };
-        }
-
         const limitNum = parseInt(limit);
+
+        // Construir la consulta
+        let query = {};
         
-        // Obtener todos los productos que coinciden con la consulta
-        const products = await Product.find(query)
-            .limit(limitNum);
-
-        res.status(200).send({
-            success: true,
-            msg: matchAll === 'true' ?
-                "Productos que coinciden con todas las etiquetas" :
-                "Productos que coinciden con al menos una etiqueta",
-            count: products.length,
-            products
-        });
-
+        if (exact === 'true') {
+            // Búsqueda exacta: el array de tags debe tener exactamente los mismos elementos
+            const allProducts = await ProductoBase.find();
+            
+            const filteredProducts = allProducts.filter(product => {
+                // Verificar si el producto tiene tags
+                if (!product.tags || !Array.isArray(product.tags)) {
+                    return false;
+                }
+                
+                // Para que sea exacto:
+                // 1. Debe tener la misma cantidad de tags
+                if (product.tags.length !== tagArray.length) {
+                    return false;
+                }
+                
+                // 2. Todos los tags solicitados deben estar presentes
+                const hasAllTags = tagArray.every(tag => product.tags.includes(tag));
+                
+                return hasAllTags;
+            }).slice(0, limitNum);
+            
+            return res.status(200).send({
+                success: true,
+                msg: "Productos con exactamente las mismas etiquetas",
+                count: filteredProducts.length,
+                products: filteredProducts
+            });
+        } else {
+            // Búsqueda normal con $all o $in
+            if (matchAll === 'true') {
+                // Todos los tags deben estar presentes (AND)
+                query = { tags: { $all: tagArray } };
+            } else {
+                // Al menos un tag debe estar presente (OR)
+                query = { tags: { $in: tagArray } };
+            }
+            
+            // Ejecutar la consulta sin paginación pero con límite
+            const products = await ProductoBase.find(query).limit(limitNum);
+    
+            res.status(200).send({
+                success: true,
+                msg: matchAll === 'true' ?
+                    "Productos que coinciden con todas las etiquetas" :
+                    "Productos que coinciden con al menos una etiqueta",
+                count: products.length,
+                products
+            });
+        }
     } catch (err) {
         console.error(err);
         res.status(500).send({
@@ -377,14 +464,17 @@ const renameTag = async (req, res) => {
             });
         }
 
-        // Buscar todos los productos que contengan la etiqueta antigua
-        const productsToUpdate = await Product.find({ tags: oldTag });
+        // Buscar todos los productos que tienen la etiqueta antigua
+        const productsToUpdate = await ProductoBase.find({ tags: oldTag });
+        let updatedCount = 0;
 
         // Actualizar la etiqueta en cada producto
         const updatePromises = productsToUpdate.map(product => {
             const tagIndex = product.tags.indexOf(oldTag);
+            
             if (tagIndex !== -1) {
                 product.tags[tagIndex] = newTag;
+                updatedCount++;
                 return product.save();
             }
             return Promise.resolve();
@@ -398,7 +488,7 @@ const renameTag = async (req, res) => {
             data: {
                 oldTag,
                 newTag,
-                productsUpdated: productsToUpdate.length
+                productsUpdated: updatedCount
             }
         });
 
@@ -425,8 +515,8 @@ const deleteTag = async (req, res) => {
             });
         }
 
-        // Actualizar todos los productos que contengan la etiqueta
-        const result = await Product.updateMany(
+        // Usar updateMany para eliminar la etiqueta de todos los productos
+        const result = await ProductoBase.updateMany(
             { tags: tag },
             { $pull: { tags: tag } }
         );
