@@ -14,7 +14,7 @@ import { tagRoutes } from './routes/tagRoutes.js';
 import { paymentMethodRoutes } from './routes/paymentMethodRoutes.js';
 import { shippingMethodRoutes } from './routes/shippingMethodRoutes.js';
 import { orderRoutes } from './routes/orderRoutes.js';
-//import { paymentProcessingRoutes } from './routes/paymentProcessingRoutes.js';
+import { paymentProcessingRoutes } from './routes/paymentProcessingRoutes.js';
 
 /*
 
@@ -36,7 +36,7 @@ app.use('/api/tags', tagRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/shipping-methods', shippingMethodRoutes);
 app.use('/api/order', orderRoutes);
-//app.use('/api/payments', paymentProcessingRoutes);
+app.use('/api/payments', paymentProcessingRoutes);
 
 /*
 

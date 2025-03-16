@@ -4,7 +4,7 @@ import { validationResult } from 'express-validator';
 import * as webpayService from '../services/webpayService.js';
 import * as mercadoPagoService from '../services/mercadoPagoService.js';
 import { OrderDetail } from '../models/OrderDetail.js';
-import { Product } from '../models/Product.js';
+import { ProductoBase } from '../models/Product.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -168,9 +168,9 @@ export const initiatePayment = async (req, res) => {
 
             // Formatear items para MercadoPago
             const items = await Promise.all(orderDetails.map(async (detail) => {
-                const product = await Product.findById(detail.productId);
+                const producto = await ProductoBase.findById(detail.productId);
                 return {
-                    name: product.name,
+                    name: producto.nombre, // Usar el campo nombre en lugar de name
                     price: detail.unitPrice,
                     quantity: detail.quantity,
                 };
