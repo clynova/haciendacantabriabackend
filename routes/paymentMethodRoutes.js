@@ -1,9 +1,8 @@
 import express from "express";
 import {
     createPaymentMethod,
-    getPaymentMethods,
     getAllPaymentMethods,
-    getPaymentMethod,
+    getPaymentMethodsById,
     updatePaymentMethod,
     deletePaymentMethod,
     restorePaymentMethod
@@ -14,8 +13,8 @@ import { checkAuth, checkRole } from "../middleware/authMiddleware.js";
 const paymentMethodRoutes = express.Router();
 
 // Rutas públicas
-paymentMethodRoutes.get("/", getPaymentMethods);
-paymentMethodRoutes.get("/:id", getPaymentMethod);
+paymentMethodRoutes.get("/", getAllPaymentMethods);
+paymentMethodRoutes.get("/:id", getPaymentMethodsById);
 
 // Rutas protegidas - solo administradores
 paymentMethodRoutes.get("/admin/all", checkAuth, checkRole('admin'), getAllPaymentMethods);
