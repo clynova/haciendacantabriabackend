@@ -187,7 +187,7 @@ const loadCart = async (req, res) => {
             });
 
         if (!cart) {
-            return res.status(400).json({ success: false, msg: "El carrito está vacío" });
+            return res.status(200).json({ success: true, msg: "El carrito está vacío" });
         }
 
         // Filtrar productos que ya no están activos o disponibles
@@ -198,7 +198,7 @@ const loadCart = async (req, res) => {
         // Si se eliminaron productos, actualizar el carrito
         if (cart.products.length === 0) {
             await Cart.findByIdAndDelete(cart._id);
-            return res.status(400).json({ success: false, msg: "El carrito está vacío" });
+            return res.status(200).json({ success: true, msg: "El carrito está vacío" });
         }
 
         await cart.save();
