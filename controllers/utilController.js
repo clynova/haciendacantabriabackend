@@ -88,4 +88,85 @@ const getTopTags = async (req, res) => {
     }
 };
 
-export { getDashboardStats, getTopTags };
+/**
+ * Obtiene el monto total de ventas realizadas
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+const getTotalSales = async (req, res) => {
+    try {
+        // Obtener todas las órdenes completadas
+        const completedOrders = await Order.find({ 
+            status: 'completed',
+            'payment.status': 'completed' 
+        });
+        
+        // Calcular el total de ventas
+        const totalSales = completedOrders.reduce((sum, order) => sum + order.total, 0);
+        
+        // Obtener ventas por método de pago
+        const paymentMethods = {};
+        completedOrders.forEach(order => {
+            const method = order.paymentMethod || 'unknown';
+            if (!paymentMethods[method]) {
+                paymentMethods[method] = 0;
+            }
+            paymentMethods[method] += order.total;
+        });
+        
+        // Ordenar los métodos de pago por monto en orden descendente
+        const paymentMethodsArray = Object.keys(paymentMethods).map(method => ({
+            metodo: method,
+            monto: paymentMethods[method]
+        }));
+        paymentMethodsArray.sort((a, b) => b.monto - a.monto);
+        
+        // Ventas por mes (últimos 6 meses)
+        const sixMonthsAgo = new Date();
+        sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
+        
+        const monthlySales = {};
+        completedOrders.forEach(order => {
+            const orderDate = new Date(order.orderDate);
+            if (orderDate >= sixMonthsAgo) {
+                const monthKey = `${orderDate.getFullYear()}-${orderDate.getMonth() + 1}`;
+                if (!monthlySales[monthKey]) {
+                    monthlySales[monthKey] = {
+                        year: orderDate.getFullYear(),
+                        month: orderDate.getMonth() + 1,
+                        total: 0,
+                        count: 0
+                    };
+                }
+                monthlySales[monthKey].total += order.total;
+                monthlySales[monthKey].count += 1;
+            }
+        });
+        
+        // Convertir a array y ordenar por fecha
+        const monthlySalesArray = Object.values(monthlySales).sort((a, b) => {
+            if (a.year !== b.year) return a.year - b.year;
+            return a.month - b.month;
+        });
+        
+        res.status(200).send({ 
+            success: true, 
+            msg: 'Ventas totales', 
+            data: {
+                totalSales: totalSales,
+                totalOrders: completedOrders.length,
+                avgOrderValue: completedOrders.length ? (totalSales / completedOrders.length) : 0,
+                paymentMethods: paymentMethodsArray,
+                monthlySales: monthlySalesArray
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ 
+            success: false,
+            message: 'Error al obtener el total de ventas',
+            error: error.message 
+        });
+    }
+};
+
+export { getDashboardStats, getTopTags, getTotalSales };

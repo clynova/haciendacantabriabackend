@@ -20,20 +20,6 @@ const createPaymentMethod = async (req, res) => {
     }
 };
 
-const getPaymentMethods = async (req, res) => {
-    try {
-        const paymentMethods = await PaymentMethod.find({ active: true });
-        res.status(200).json({
-            success: true,
-            msg: "Métodos de pago enviados",
-            data: paymentMethods
-        });
-    } catch (error) {
-        console.log(error);
-        res.status(500).json({ success: false, msg: "Error al obtener los métodos de pago" });
-    }
-};
-
 const getAllPaymentMethods = async (req, res) => {
     try {
         const paymentMethods = await PaymentMethod.find();
@@ -48,7 +34,7 @@ const getAllPaymentMethods = async (req, res) => {
     }
 };
 
-const getPaymentMethod = async (req, res) => {
+const getPaymentMethodsById = async (req, res) => {
     const { id } = req.params;
     try {
         const paymentMethod = await PaymentMethod.findById(id);
@@ -163,9 +149,8 @@ const restorePaymentMethod = async (req, res) => {
 
 export {
     createPaymentMethod,
-    getPaymentMethods,
+    getPaymentMethodsById,
     getAllPaymentMethods,
-    getPaymentMethod,
     updatePaymentMethod,
     deletePaymentMethod,
     restorePaymentMethod
