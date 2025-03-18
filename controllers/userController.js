@@ -4,6 +4,7 @@ import { generarCodigo } from "../helpers/generarCodigo.js";
 import { validationResult } from 'express-validator';
 import { generarJWT } from "../helpers/generarJWT.js";
 import { generarId } from "../helpers/generarId.js";
+import { enviarEmailConfirmacion, enviarEmailRecuperacion } from "./emailController.js";
 
 const registrar = async (req, res) => {
     try {
@@ -22,10 +23,22 @@ const registrar = async (req, res) => {
         const user = new User(req.body);
         const userGuardado = await user.save();
 
+        // Enviar email de confirmación
+        const resultadoEmail = await enviarEmailConfirmacion({
+            firstName: userGuardado.firstName,
+            email: userGuardado.email,
+            token: userGuardado.token
+        });
+
+        if (!resultadoEmail.success) {
+            console.error("Error al enviar el email de confirmación:", resultadoEmail.error);
+            // No devolvemos error al cliente, pero registramos el problema
+        }
+
         // Respuesta al cliente
         res.status(201).send({
             success: true,
-            msg: "Usuario registrado correctamente",
+            msg: "Usuario registrado correctamente. Por favor, revisa tu email para confirmar la cuenta.",
             data: {
                 id: userGuardado._id,
                 firstName: userGuardado.firstName,
@@ -144,10 +157,21 @@ const resetPassword = async (req, res) => {
     }
 
     usuarioExistente.token = generarId();
-    await usuarioExistente.save()
+    await usuarioExistente.save();
 
+    // Enviar email de recuperación
+    const resultadoEmail = await enviarEmailRecuperacion({
+        firstName: usuarioExistente.firstName,
+        email: usuarioExistente.email,
+        token: usuarioExistente.token
+    });
 
-    res.status(201).send({ success: true, msg: 'Se envio mensaje token para resetear password' });
+    if (!resultadoEmail.success) {
+        console.error("Error al enviar el email de recuperación:", resultadoEmail.error);
+        // No devolvemos error al cliente, pero registramos el problema
+    }
+
+    res.status(201).send({ success: true, msg: 'Se envió un mensaje con las instrucciones para restablecer tu contraseña' });
 };
 
 const comprobarToken = async (req, res) => {
@@ -157,6 +181,9 @@ const comprobarToken = async (req, res) => {
     }
     res.status(200).send({ success: true, msg: 'Se valido el token, crea la nueva password' });
 };
+
+
+
 
 const nuevoPassword = async (req, res) => {
     try {
