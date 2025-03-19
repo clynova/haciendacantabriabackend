@@ -35,9 +35,9 @@ const getAllPaymentMethods = async (req, res) => {
 };
 
 const getPaymentMethodsById = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const paymentMethod = await PaymentMethod.findById(id);
+        const paymentMethod = await PaymentMethod.findById(_id);
         if (!paymentMethod) {
             return res.status(404).json({ success: false, msg: "Método de pago no encontrado" });
         }
@@ -53,14 +53,14 @@ const getPaymentMethodsById = async (req, res) => {
 };
 
 const updatePaymentMethod = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).json({ success: false, msg: "Errores de validación", errors: errors.array() });
         }
 
-        const paymentMethod = await PaymentMethod.findById(id);
+        const paymentMethod = await PaymentMethod.findById(_id);
         if (!paymentMethod) {
             return res.status(404).json({ success: false, msg: "Método de pago no encontrado" });
         }
@@ -96,9 +96,9 @@ const updatePaymentMethod = async (req, res) => {
 };
 
 const deletePaymentMethod = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const paymentMethod = await PaymentMethod.findById(id);
+        const paymentMethod = await PaymentMethod.findById(_id);
         if (!paymentMethod) {
             return res.status(404).json({ success: false, msg: "Método de pago no encontrado" });
         }
@@ -122,9 +122,9 @@ const deletePaymentMethod = async (req, res) => {
 };
 
 const restorePaymentMethod = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const paymentMethod = await PaymentMethod.findById(id);
+        const paymentMethod = await PaymentMethod.findById(_id);
         if (!paymentMethod) {
             return res.status(404).json({ success: false, msg: "Método de pago no encontrado" });
         }

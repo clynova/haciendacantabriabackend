@@ -14,13 +14,13 @@ const paymentMethodRoutes = express.Router();
 
 // Rutas públicas
 paymentMethodRoutes.get("/", getAllPaymentMethods);
-paymentMethodRoutes.get("/:id", getPaymentMethodsById);
+paymentMethodRoutes.get("/:_id", getPaymentMethodsById);
 
 // Rutas protegidas - solo administradores
 paymentMethodRoutes.get("/admin/all", checkAuth, checkRole('admin'), getAllPaymentMethods);
 paymentMethodRoutes.post("/", checkAuth, checkRole('admin'), validateCreatePaymentMethod, createPaymentMethod);
-paymentMethodRoutes.put("/:id", checkAuth, checkRole('admin'), validateUpdatePaymentMethod, updatePaymentMethod);
-paymentMethodRoutes.delete("/:id", checkAuth, checkRole('admin'), deletePaymentMethod);
-paymentMethodRoutes.put("/restore/:id", checkAuth, checkRole('admin'), restorePaymentMethod);
+paymentMethodRoutes.put("/:_id", checkAuth, checkRole('admin'), validateUpdatePaymentMethod, updatePaymentMethod);
+paymentMethodRoutes.delete("/:_id", checkAuth, checkRole('admin'), deletePaymentMethod);
+paymentMethodRoutes.put("/restore/:_id", checkAuth, checkRole('admin'), restorePaymentMethod);
 
 export { paymentMethodRoutes }; 
