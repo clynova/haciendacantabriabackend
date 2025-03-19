@@ -36,6 +36,15 @@ const validateCreateShippingMethod = [
             }
             return true;
         }),
+    body('methods.*.free_shipping_threshold')
+        .optional()
+        .isNumeric().withMessage('El umbral de envío gratuito debe ser un número')
+        .custom((value) => {
+            if (value < 0) {
+                throw new Error('El umbral de envío gratuito no puede ser negativo');
+            }
+            return true;
+        }),
     body('active')
         .optional()
         .isBoolean().withMessage('El campo active debe ser un valor booleano')
@@ -78,6 +87,15 @@ const validateUpdateShippingMethod = [
         .custom((value) => {
             if (value < 0) {
                 throw new Error('El costo extra por kg no puede ser negativo');
+            }
+            return true;
+        }),
+    body('methods.*.free_shipping_threshold')
+        .optional()
+        .isNumeric().withMessage('El umbral de envío gratuito debe ser un número')
+        .custom((value) => {
+            if (value < 0) {
+                throw new Error('El umbral de envío gratuito no puede ser negativo');
             }
             return true;
         }),
