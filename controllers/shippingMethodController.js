@@ -30,9 +30,9 @@ const getShippingMethods = async (req, res) => {
 };
 
 const getShippingMethod = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const shippingMethod = await ShippingMethod.findById(id);
+        const shippingMethod = await ShippingMethod.findById(_id);
         if (!shippingMethod) {
             return res.status(404).json({ success: false, msg: "Método de envío no encontrado" });
         }
@@ -48,9 +48,9 @@ const getShippingMethod = async (req, res) => {
 };
 
 const updateShippingMethod = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const shippingMethod = await ShippingMethod.findById(id);
+        const shippingMethod = await ShippingMethod.findById(_id);
         if (!shippingMethod) {
             return res.status(404).json({ success: false, msg: "Método de envío no encontrado" });
         }
@@ -58,6 +58,7 @@ const updateShippingMethod = async (req, res) => {
         // Actualizar campos principales
         shippingMethod.name = req.body.name || shippingMethod.name;
         shippingMethod.tracking_url = req.body.tracking_url !== undefined ? req.body.tracking_url : shippingMethod.tracking_url;
+        //shippingMethod.free_shipping_threshold = req.body.free_shipping_threshold !== undefined ? req.body.free_shipping_threshold : shippingMethod.free_shipping_threshold;
         
         // Actualizar métodos si se proporcionan
         if (req.body.methods && Array.isArray(req.body.methods)) {
@@ -79,9 +80,9 @@ const updateShippingMethod = async (req, res) => {
 };
 
 const deleteShippingMethod = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const shippingMethod = await ShippingMethod.findById(id);
+        const shippingMethod = await ShippingMethod.findById(_id);
         if (!shippingMethod) {
             return res.status(404).json({ success: false, msg: "Método de envío no encontrado" });
         }

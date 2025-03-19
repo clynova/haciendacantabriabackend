@@ -7,17 +7,17 @@ import {
     deleteShippingMethod,
 } from "../controllers/shippingMethodController.js";
 import { validateCreateShippingMethod, validateUpdateShippingMethod } from "../middleware/validators/shippingMethodValidators.js";
-import { checkAuth } from "../middleware/authMiddleware.js";
+import { checkAuth, checkRole } from "../middleware/authMiddleware.js";
 
 const shippingMethodRoutes = express.Router();
 
 // Rutas públicas
 shippingMethodRoutes.get("/", getShippingMethods);
-shippingMethodRoutes.get("/:id", getShippingMethod);
+shippingMethodRoutes.get("/:_id", getShippingMethod);
 
 // Rutas protegidas - solo administradores
-shippingMethodRoutes.post("/", checkAuth, validateCreateShippingMethod, createShippingMethod);
-shippingMethodRoutes.put("/:id", checkAuth, validateUpdateShippingMethod, updateShippingMethod);
-shippingMethodRoutes.delete("/:id", checkAuth, deleteShippingMethod);
+shippingMethodRoutes.post("/", checkAuth, checkRole('admin'), validateCreateShippingMethod, createShippingMethod);
+shippingMethodRoutes.put("/:_id", checkAuth, checkRole('admin'), validateUpdateShippingMethod, updateShippingMethod);
+shippingMethodRoutes.delete("/:_id", checkAuth, checkRole('admin'), deleteShippingMethod);
 
 export { shippingMethodRoutes };

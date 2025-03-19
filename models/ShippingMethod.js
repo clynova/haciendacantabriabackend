@@ -2,10 +2,10 @@ import mongoose from "mongoose";
 
 const shippingMethodSchema = new mongoose.Schema(
     {
-        name: { 
-            type: String, 
-            required: true, 
-            trim: true 
+        name: {
+            type: String,
+            required: true,
+            trim: true
         },
         tracking_url: {
             type: String,
@@ -34,16 +34,21 @@ const shippingMethodSchema = new mongoose.Schema(
                     required: true,
                     min: 0,
                     default: 0
-                }
+                },
+                free_shipping_threshold: {
+                    type: Number,
+                    min: 0,
+                    default: null
+                },
             }
         ],
-        active: { 
-            type: Boolean, 
-            default: true 
+        active: {
+            type: Boolean,
+            default: true
         }
     },
-    { 
-        timestamps: true 
+    {
+        timestamps: true
     }
 );
 
