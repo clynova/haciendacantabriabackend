@@ -117,6 +117,11 @@ const createOrder = async (req, res) => {
             shippingCost += (totalWeight * selectedMethod.extra_cost_per_kg);
         }
 
+        // Verificar si aplica envío gratuito basado en el umbral
+        if (selectedMethod.free_shipping_threshold && subtotal >= selectedMethod.free_shipping_threshold) {
+            shippingCost = 0;
+        }
+
         const subtotalEnvio = subtotal + shippingCost;
 
         // Calcular comisión del método de pago
@@ -386,21 +391,25 @@ const updateOrder = async (req, res) => {
                     estimatedDeliveryDate.setDate(estimatedDeliveryDate.getDate() + daysToAdd);
 
                     // Si hay un costo de envío en la solicitud, usarlo, si no, usar el costo base del método
-                    const shippingCost = req.body.shipping.cost || selectedMethod.base_cost;
+                    let shippingCost = req.body.shipping.cost || selectedMethod.base_cost;
 
-                    // Actualizar la orden con la nueva información de envío
-                    order.shipping.carrier = carrier._id;
-                    order.shipping.method = selectedMethod.name;
-                    order.shipping.cost = shippingCost;
-                    order.estimatedDeliveryDate = estimatedDeliveryDate;
-
-                    // Recalcular el total de la orden
+                    // Calcular el total de productos
                     const orderDetails = await OrderDetail.find({ orderId: order._id });
                     let productsTotal = 0;
                     for (const detail of orderDetails) {
                         productsTotal += detail.price * detail.quantity;
                     }
 
+                    // Verificar si aplica envío gratuito basado en el umbral
+                    if (selectedMethod.free_shipping_threshold && productsTotal >= selectedMethod.free_shipping_threshold) {
+                        shippingCost = 0;
+                    }
+
+                    // Actualizar la orden con la nueva información de envío
+                    order.shipping.carrier = carrier._id;
+                    order.shipping.method = selectedMethod.name;
+                    order.shipping.cost = shippingCost;
+                    order.estimatedDeliveryDate = estimatedDeliveryDate;
                     order.total = productsTotal + shippingCost;
                 }
             }
