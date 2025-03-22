@@ -231,13 +231,16 @@ const updateQuotation = async (req, res) => {
             });
         }
 
+        console.log(req.body);
+
         // Actualizar campos permitidos
         if (req.body.status) quotation.status = req.body.status;
         if (req.body.notes) quotation.notes = req.body.notes;
         if (req.body.validUntil) quotation.validUntil = new Date(req.body.validUntil);
-        if (req.body.additionalDetails) quotation.additionalDetails = req.body.rejectionReason;
+        if (req.body.additionalDetails) quotation.additionalDetails = req.body.additionalDetails;
+        if (req.body.rejectionReason) quotation.rejectionReason = req.body.rejectionReason;
 
-        // Si la cotización se aprueba, actualizar campos adicionales
+        // Si la cotización se aprueba, actualizar campos adicionalesnotes
         if (req.body.status === 'approved') {
             if (req.body.orderId) {
                 quotation.orderId = req.body.orderId;
