@@ -221,9 +221,9 @@ const getQuotation = async (req, res) => {
 };
 
 const updateQuotation = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const quotation = await Quotation.findById(id);
+        const quotation = await Quotation.findById(_id);
         if (!quotation) {
             return res.status(404).json({ 
                 success: false, 
@@ -235,7 +235,7 @@ const updateQuotation = async (req, res) => {
         if (req.body.status) quotation.status = req.body.status;
         if (req.body.notes) quotation.notes = req.body.notes;
         if (req.body.validUntil) quotation.validUntil = new Date(req.body.validUntil);
-        if (req.body.additionalDetails) quotation.additionalDetails = req.body.additionalDetails;
+        if (req.body.additionalDetails) quotation.additionalDetails = req.body.rejectionReason;
 
         // Si la cotización se aprueba, actualizar campos adicionales
         if (req.body.status === 'approved') {
@@ -262,9 +262,9 @@ const updateQuotation = async (req, res) => {
 };
 
 const deleteQuotation = async (req, res) => {
-    const { id } = req.params;
+    const { _id } = req.params;
     try {
-        const quotation = await Quotation.findById(id);
+        const quotation = await Quotation.findById(_id);
         if (!quotation) {
             return res.status(404).json({ 
                 success: false, 
@@ -273,7 +273,7 @@ const deleteQuotation = async (req, res) => {
         }
 
         // Eliminar los detalles de la cotización
-        await QuotationDetail.deleteMany({ quotationId: id });
+        await QuotationDetail.deleteMany({ quotationId: _id });
         
         // Eliminar la cotización
         await quotation.deleteOne();
@@ -291,4 +291,77 @@ const deleteQuotation = async (req, res) => {
     }
 };
 
-export { createQuotation, getQuotations, getQuotation, updateQuotation, deleteQuotation };
+const getUserQuotations = async (req, res) => {
+    try {
+        const userId = req.user._id;
+        const quotations = await Quotation.find({ userId })
+            .populate('shipping.carrier')
+            .populate('userId', 'firstName lastName email');
+
+        // Obtener los detalles de los productos para cada cotización
+        const quotationsWithDetails = await Promise.all(
+            quotations.map(async (quotation) => {
+                const quotationDetails = await QuotationDetail.find({ quotationId: quotation._id })
+                    .populate('productId');
+                
+                return {
+                    ...quotation.toObject(),
+                    products: quotationDetails.map(detail => ({
+                        product: detail.productId,
+                        quantity: detail.quantity,
+                        price: detail.price
+                    }))
+                };
+            })
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            quotations: quotationsWithDetails 
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ 
+            success: false, 
+            msg: "Error al obtener las cotizaciones del usuario" 
+        });
+    }
+};
+
+const getAllQuotations = async (req, res) => {
+    try {
+        const quotations = await Quotation.find()
+            .populate('shipping.carrier')
+            .populate('userId', 'firstName lastName email');
+
+        // Obtener los detalles de los productos para cada cotización
+        const quotationsWithDetails = await Promise.all(
+            quotations.map(async (quotation) => {
+                const quotationDetails = await QuotationDetail.find({ quotationId: quotation._id })
+                    .populate('productId');
+                
+                return {
+                    ...quotation.toObject(),
+                    products: quotationDetails.map(detail => ({
+                        product: detail.productId,
+                        quantity: detail.quantity,
+                        price: detail.price
+                    }))
+                };
+            })
+        );
+
+        res.status(200).json({ 
+            success: true, 
+            quotations: quotationsWithDetails 
+        });
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ 
+            success: false, 
+            msg: "Error al obtener todas las cotizaciones" 
+        });
+    }
+};
+
+export { createQuotation, getQuotations, getQuotation, updateQuotation, deleteQuotation, getUserQuotations, getAllQuotations };
