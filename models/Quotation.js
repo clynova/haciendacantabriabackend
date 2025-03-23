@@ -8,7 +8,7 @@ const quotationSchema = new mongoose.Schema(
         status: { 
             type: String, 
             required: true, 
-            enum: ["pending", "approved", "rejected", "converted"],
+            enum: ["pending", "approved", "rejected", "converted", "finalized"],
             default: "pending"
         },
         subtotal: { type: Number, required: true },

@@ -6,6 +6,8 @@ import { User } from '../models/User.js';
 import { validationResult } from 'express-validator';
 import { ShippingMethod } from "../models/ShippingMethod.js";
 import { PaymentMethod } from '../models/PaymentMethod.js';
+import { Quotation } from '../models/Quotation.js';
+import { QuotationDetail } from '../models/QuotationDetail.js';
 
 const createOrder = async (req, res) => {
     try {
@@ -466,4 +468,153 @@ const deleteOrder = async (req, res) => {
     }
 };
 
-export { createOrder, getUserOrders, getOrders, getOrder, updateOrder, deleteOrder };
+const createOrderFromQuotation = async (req, res) => {
+    try {
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).json({ success: false, msg: "Errores de validación", errors: errors.array() });
+        }
+
+        const userId = req.user._id;
+        const { quotationId, paymentMethodId } = req.body;
+
+        console.log(`Quotation ID: ${quotationId}`);
+        console.log(`Payment Method ID: ${paymentMethodId}`);
+
+        // Obtener y validar la cotización
+        const quotation = await Quotation.findById(quotationId)
+            .populate('shipping.carrier')
+            .populate({
+                path: 'userId',
+                select: 'firstName lastName email'
+            });
+
+        if (!quotation) {
+            return res.status(404).json({ success: false, msg: "Cotización no encontrada" });
+        }
+
+        // Validar que la cotización pertenezca al usuario
+        if (quotation.userId._id.toString() !== userId.toString()) {
+            return res.status(403).json({ success: false, msg: "No tienes permiso para usar esta cotización" });
+        }
+
+        // Validar el estado de la cotización
+        if (quotation.status !== "approved") {
+            return res.status(400).json({ success: false, msg: "La cotización debe estar aprobada para crear una orden" });
+        }
+
+        // Validar que la cotización no haya expirado
+        if (new Date() > new Date(quotation.validUntil)) {
+            return res.status(400).json({ success: false, msg: "La cotización ha expirado" });
+        }
+
+        // Verificar y obtener el método de pago
+        const paymentMethodObject = await PaymentMethod.findById(paymentMethodId);
+        if (!paymentMethodObject || !paymentMethodObject.active) {
+            return res.status(400).json({ success: false, msg: "Método de pago inválido" });
+        }
+
+        // Calcular comisión del método de pago
+        const subtotalEnvio = quotation.subtotal + quotation.shipping.cost;
+        const paymentCommission = (subtotalEnvio * paymentMethodObject.commission_percentage) / 100;
+        const total = subtotalEnvio + paymentCommission;
+
+        // Obtener los detalles de la cotización
+        const quotationDetails = await QuotationDetail.find({ quotationId });
+
+        // Crear la orden
+        const order = new Order({
+            userId: quotation.userId._id,
+            orderDate: new Date(),
+            status: "pending",
+            subtotal: quotation.subtotal,
+            total,
+            shippingAddress: quotation.shippingAddress,
+            paymentMethod: paymentMethodId,
+            payment: {
+                status: 'pending',
+                currency: 'CLP',
+                amount: total,
+                provider: paymentMethodObject.provider,
+                commissionPercentage: paymentMethodObject.commission_percentage,
+                commissionAmount: paymentCommission
+            },
+            shipping: {
+                carrier: quotation.shipping.carrier._id,
+                method: quotation.shipping.method,
+                cost: quotation.shipping.cost,
+                trackingNumber: null
+            },
+            estimatedDeliveryDate: calculateEstimatedDeliveryDate(quotation.shipping.carrier.methods[0])
+        });
+
+        await order.save();
+
+        // Crear los detalles de la orden
+        for (const detail of quotationDetails) {
+            const orderDetail = new OrderDetail({
+                orderId: order._id,
+                productId: detail.productId,
+                quantity: detail.quantity,
+                price: detail.price
+            });
+            await orderDetail.save();
+
+            // Actualizar el stock
+            const producto = await ProductoBase.findById(detail.productId);
+            if (producto) {
+                if (producto.tipoProducto === 'ProductoCarne') {
+                    await ProductoBase.findByIdAndUpdate(detail.productId, 
+                        { $inc: { 'inventario.stockKg': -detail.quantity } });
+                } else {
+                    await ProductoBase.findByIdAndUpdate(detail.productId, 
+                        { $inc: { 'inventario.stockUnidades': -detail.quantity } });
+                }
+            }
+        }
+
+        // Actualizar el estado de la cotización a finalizada y vincularla con la orden
+        quotation.status = "finalized";
+        quotation.orderId = order._id;
+        await quotation.save();
+
+        // Poblar la información completa de la orden
+        await order.populate('shipping.carrier');
+
+        res.status(201).json({
+            success: true,
+            msg: "Orden creada exitosamente desde la cotización",
+            order,
+            costBreakdown: {
+                subtotal: quotation.subtotal,
+                shippingCost: quotation.shipping.cost,
+                paymentCommission,
+                total
+            }
+        });
+
+    } catch (err) {
+        console.error("Error al crear la orden desde la cotización:", err);
+        res.status(500).json({ 
+            success: false, 
+            msg: "Error al crear la orden desde la cotización", 
+            error: err.message 
+        });
+    }
+};
+
+// Función auxiliar para calcular la fecha estimada de entrega
+const calculateEstimatedDeliveryDate = (shippingMethod) => {
+    const estimatedDeliveryDate = new Date();
+    const deliveryDaysMatch = shippingMethod.delivery_time.match(/(\d+)\s*(?:días|días hábiles|day|days)/);
+    let daysToAdd = 7; // Valor por defecto
+    
+    if (deliveryDaysMatch && deliveryDaysMatch[1]) {
+        daysToAdd = parseInt(deliveryDaysMatch[1], 10);
+    }
+    
+    estimatedDeliveryDate.setDate(estimatedDeliveryDate.getDate() + daysToAdd);
+    return estimatedDeliveryDate;
+};
+
+export { createOrder, getUserOrders, getOrders, getOrder, updateOrder, deleteOrder, createOrderFromQuotation };
