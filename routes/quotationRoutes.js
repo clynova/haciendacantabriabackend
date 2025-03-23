@@ -11,10 +11,10 @@ quotationRoutes.use(checkAuth);
 // Rutas para usuarios normales
 quotationRoutes.post('/', validateCreateQuotation, createQuotation);
 quotationRoutes.get('/user', getUserQuotations); // Nueva ruta para obtener cotizaciones del usuario
+quotationRoutes.get('/:quotationId', getQuotation);
 
 // Rutas que requieren rol de administrador
 quotationRoutes.get('/all', checkRole('admin'), getAllQuotations); // Nueva ruta para obtener todas las cotizaciones
-quotationRoutes.get('/:quotationId', checkRole('admin'), getQuotation);
 quotationRoutes.put('/:_id', checkRole('admin'), updateQuotation);
 quotationRoutes.delete('/:_id', checkRole('admin'), deleteQuotation);
 
