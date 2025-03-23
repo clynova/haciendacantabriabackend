@@ -8,7 +8,7 @@ const quotationSchema = new mongoose.Schema(
         status: { 
             type: String, 
             required: true, 
-            enum: ["pending", "approved", "rejected", "converted"],
+            enum: ["pending", "approved", "rejected", "converted", "finalized"],
             default: "pending"
         },
         subtotal: { type: Number, required: true },
@@ -41,7 +41,8 @@ const quotationSchema = new mongoose.Schema(
         },
         notes: { type: String }, // Notas administrativas
         validUntil: { type: Date, required: true }, // Período de validez de la cotización
-        additionalDetails: { type: mongoose.Schema.Types.Mixed } // Para información extra
+        additionalDetails: { type: mongoose.Schema.Types.Mixed }, // Para información extra
+        rejectionReason: { type: String, trim: true }
     },
     { timestamps: true }
 );

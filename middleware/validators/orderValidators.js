@@ -1,4 +1,5 @@
 import { body, param } from 'express-validator';
+import { check } from 'express-validator';
 
 const validateOrder = [
     // Shipping Address ID Validation
@@ -34,6 +35,20 @@ const validateOrderId = [
     param('orderId')
         .notEmpty().withMessage('El ID de la orden es requerido')
         .isMongoId().withMessage('El ID de la orden debe ser un ID de MongoDB válido')
+];
+
+export const validateCreateOrderFromQuotation = [
+    check('quotationId')
+        .notEmpty()
+        .withMessage('El ID de la cotización es requerido')
+        .isMongoId()
+        .withMessage('ID de cotización inválido'),
+        
+    check('paymentMethodId')
+        .notEmpty()
+        .withMessage('El método de pago es requerido')
+        .isMongoId()
+        .withMessage('ID de método de pago inválido')
 ];
 
 export { validateOrder, validateOrderId };
