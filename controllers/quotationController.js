@@ -184,7 +184,7 @@ const getQuotation = async (req, res) => {
     try {
         const quotation = await Quotation.findById(quotationId)
             .populate('shipping.carrier')
-            .populate('userId', 'name email');
+            .populate('userId', 'firstName lastName email');
         
         if (!quotation) {
             return res.status(404).json({ 
