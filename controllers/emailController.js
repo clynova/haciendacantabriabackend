@@ -5,6 +5,15 @@ dotenv.config();
 
 // Configuración del transporter de nodemailer
 const createTransporter = () => {
+  console.log('Iniciando configuración del transporter de email...');
+  console.log('Variables de entorno:', {
+    host: process.env.EMAIL_HOST,
+    port: process.env.EMAIL_PORT,
+    secure: process.env.EMAIL_SECURE,
+    user: process.env.EMAIL_USER,
+    from: process.env.EMAIL_FROM
+  });
+
   // Opciones de configuración para SSL/TLS
   const options = {
     host: process.env.EMAIL_HOST,
@@ -17,14 +26,20 @@ const createTransporter = () => {
     // Configuraciones adicionales para manejar problemas de SSL/TLS
     tls: {
       // No verificar el certificado (útil para desarrollo, pero considere habilitarlo en producción)
-      rejectUnauthorized: false,
+      rejectUnauthorized: true, // Habilitar verificación SSL para producción
       // Usar versión mínima de TLS 1.2
       minVersion: 'TLSv1.2'
     }
   };
 
-  console.log('*'.repeat(50), process.env.EMAIL_PASS, '*'.repeat(50))
-  return nodemailer.createTransport(options);
+  try {
+    const transporter = nodemailer.createTransport(options);
+    console.log('Transporter creado exitosamente');
+    return transporter;
+  } catch (error) {
+    console.error('Error al crear el transporter:', error);
+    throw error;
+  }
 };
 
 // Función para generar el HTML del email de confirmación de cuenta
@@ -247,14 +262,17 @@ const generarEmailRecuperacionHTML = ({ firstName, token }) => {
 const enviarEmailConfirmacion = async (usuario) => {
   try {
     const { firstName, email, token } = usuario;
-
+    console.log('Iniciando envío de email de confirmación a:', email);
+    
     const transporter = createTransporter();
+    console.log('Transporter creado');
 
     const emailHtml = generarEmailConfirmacionHTML({
       firstName,
       token,
       email
     });
+    console.log('HTML generado');
 
     const info = await transporter.sendMail({
       from: `"Hacienda Cantabria" <${process.env.EMAIL_FROM}>`,
@@ -263,10 +281,20 @@ const enviarEmailConfirmacion = async (usuario) => {
       html: emailHtml
     });
 
-    console.log('Email de confirmación enviado:', info.messageId);
+    console.log('Email de confirmación enviado:', {
+      messageId: info.messageId,
+      response: info.response,
+      accepted: info.accepted,
+      rejected: info.rejected
+    });
     return { success: true, messageId: info.messageId };
   } catch (error) {
-    console.error('Error al enviar email de confirmación:', error);
+    console.error('Error detallado al enviar email:', {
+      message: error.message,
+      code: error.code,
+      command: error.command,
+      stack: error.stack
+    });
     return { success: false, error: error.message };
   }
 };
