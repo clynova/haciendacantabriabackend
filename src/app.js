@@ -37,8 +37,8 @@ app.use(compression());
 // Configuración de CORS
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://tu-frontend-domain.com']
-    : 'http://localhost:5173',
+    ? ['https://haciendacantabriafrontend.vercel.app']
+    : 'http://localhost:4173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
 }));
