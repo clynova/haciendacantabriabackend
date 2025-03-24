@@ -4,7 +4,7 @@ const orderSchema = new mongoose.Schema(
     {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         orderDate: { type: Date, default: Date.now },
-        status: { type: String, required: true, enum: ["pending", "completed", "canceled"] },
+        status: { type: String, required: true, enum: ["pending", "completed", "canceled", "finalized"] },
         subtotal: { type: Number, required: true }, // Subtotal solo de productos
         total: { type: Number, required: true },    // Total con envío y comisiones
         shippingAddress: {
