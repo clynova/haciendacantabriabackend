@@ -261,31 +261,40 @@ const createOrder = async (req, res) => {
 const getUserOrders = async (req, res) => {
     try {
         const userId = req.user._id;
-        // Obtener las órdenes del usuario
-        const orders = await Order.find({ userId }).populate('shipping.carrier');
+        const orders = await Order.find({ userId })
+            .populate('shipping.carrier')
+            .populate('userId', 'firstName lastName email');
 
         // Obtener los detalles de los productos para cada orden
         const ordersWithDetails = await Promise.all(
             orders.map(async (order) => {
-                const orderDetails = await OrderDetail.find({ orderId: order._id }).populate({
-                    path: 'productId',
-                    model: 'Producto' // Actualizado para usar el nuevo nombre del modelo
-                });
+                const orderDetails = await OrderDetail.find({ orderId: order._id })
+                    .populate({
+                        path: 'productId',
+                        model: 'Producto'
+                    });
+
                 return {
-                    ...order.toObject(), // Convertir el documento de Mongoose a un objeto plano
+                    ...order.toObject(),
                     products: orderDetails.map(detail => ({
-                        productId: detail.productId,
+                        product: detail.productId,
                         quantity: detail.quantity,
-                        price: detail.price,
-                    })),
+                        price: detail.price
+                    }))
                 };
             })
         );
 
-        res.status(200).json({ success: true, orders: ordersWithDetails });
+        res.status(200).json({ 
+            success: true, 
+            orders: ordersWithDetails 
+        });
     } catch (err) {
         console.error("Error al obtener las órdenes del usuario:", err);
-        res.status(500).json({ success: false, msg: "Error al obtener las órdenes del usuario" });
+        res.status(500).json({ 
+            success: false, 
+            msg: "Error al obtener las órdenes del usuario" 
+        });
     }
 };
 
@@ -293,11 +302,31 @@ const getOrders = async (req, res) => {
     try {
         const orders = await Order.find()
             .populate('shipping.carrier')
-            .populate('userId', 'name email');
+            .populate('userId', 'firstName lastName email');
+
+        // Obtener los detalles de los productos para cada orden
+        const ordersWithDetails = await Promise.all(
+            orders.map(async (order) => {
+                const orderDetails = await OrderDetail.find({ orderId: order._id })
+                    .populate({
+                        path: 'productId',
+                        model: 'Producto'
+                    });
+
+                return {
+                    ...order.toObject(),
+                    products: orderDetails.map(detail => ({
+                        product: detail.productId,
+                        quantity: detail.quantity,
+                        price: detail.price
+                    }))
+                };
+            })
+        );
 
         res.status(200).json({ 
             success: true, 
-            orders: orders 
+            orders: ordersWithDetails 
         });
     } catch (error) {
         console.log(error);
@@ -313,7 +342,7 @@ const getOrder = async (req, res) => {
     try {
         const order = await Order.findById(orderId)
             .populate('shipping.carrier')
-            .populate('userId', 'name email');
+            .populate('userId', 'firstName lastName email');
         
         if (!order) {
             return res.status(404).json({ 
@@ -321,12 +350,21 @@ const getOrder = async (req, res) => {
                 msg: "Orden no encontrada" 
             });
         }
+
+        // Verificar si el usuario es admin o es el dueño de la orden
+        if (!req.user.roles.includes('admin') && order.userId._id.toString() !== req.user._id.toString()) {
+            return res.status(403).json({ 
+                success: false, 
+                msg: "No tienes permiso para ver esta orden" 
+            });
+        }
         
-        // Obtener detalles de la orden
-        const orderDetails = await OrderDetail.find({ orderId: order._id }).populate({
-            path: 'productId',
-            model: 'Producto' // Actualizado para usar el nuevo nombre del modelo
-        });
+        const orderDetails = await OrderDetail.find({ orderId: order._id })
+            .populate({
+                path: 'productId',
+                model: 'Producto'
+            });
+
         const responseOrder = {
             ...order.toObject(),
             products: orderDetails.map(detail => ({

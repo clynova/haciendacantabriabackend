@@ -16,15 +16,18 @@ const orderRoutes = express.Router();
 // Rutas protegidas que requieren autenticación
 orderRoutes.use(checkAuth);
 
+// Rutas para usuarios normales
+orderRoutes.post('/', validateOrder, createOrder);
+orderRoutes.get('/user', getUserOrders);
+orderRoutes.get('/user/:orderId', validateOrderId, getOrder);
+
 // Ruta para crear orden desde cotización
 orderRoutes.post('/from-quotation', validateCreateOrderFromQuotation, createOrderFromQuotation);
 
-// Rutas existentes
-orderRoutes.post('/', validateOrder, createOrder);
-orderRoutes.get('/user', getUserOrders);
-orderRoutes.get('/', checkRole('admin'), getOrders);
-orderRoutes.get('/:orderId', validateOrderId, getOrder);
-orderRoutes.put('/:id', checkRole('admin'), updateOrder);
-orderRoutes.delete('/:id', checkRole('admin'), deleteOrder);
+// Rutas exclusivas para administradores
+orderRoutes.get('/all', checkRole('admin'), getOrders);
+orderRoutes.get('/:orderId', checkRole('admin'), validateOrderId, getOrder);
+orderRoutes.put('/:orderId', checkRole('admin'), validateOrderId, updateOrder);
+orderRoutes.delete('/:orderId', checkRole('admin'), validateOrderId, deleteOrder);
 
 export { orderRoutes };
