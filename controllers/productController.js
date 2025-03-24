@@ -91,9 +91,20 @@ const createProduct = async (req, res) => {
             data: savedProduct
         });
 
-    } catch (err) {
-        console.error(err);
-        if (err.code === 11000) {
+    } catch (error) {
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                code: 11000,
+                error: {
+                    keyPattern: error.keyPattern,
+                    keyValue: error.keyValue,
+                    message: 'Duplicate key error'
+                }
+            });
+        }
+        console.error(error);
+        if (error.code === 11000) {
             res.status(400).send({
                 success: false,
                 msg: "Ya existe un producto con ese código o SKU"
