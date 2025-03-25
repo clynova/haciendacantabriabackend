@@ -38,7 +38,7 @@ app.use(compression());
 console.log(process.env.NODE_ENV)
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://haciendacantabriafrontend.vercel.app/']
+    ? ['https://haciendacantabriafrontend.vercel.app/', 'https://haciendacantabriafrontend.vercel.app', 'https://haciendacantabria.com', 'https://www.haciendacantabria.com']
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
