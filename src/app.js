@@ -35,9 +35,10 @@ app.use(morgan('combined'));
 app.use(compression());
 
 // Configuración de CORS
+console.log(process.env.NODE_ENV)
 app.use(cors({
   origin: process.env.NODE_ENV === 'production'
-    ? ['https://haciendacantabriabackend.onrender.com/']
+    ? ['https://haciendacantabriafrontend.vercel.app/']
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
