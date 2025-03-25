@@ -655,4 +655,58 @@ const calculateEstimatedDeliveryDate = (shippingMethod) => {
     return estimatedDeliveryDate;
 };
 
-export { createOrder, getUserOrders, getOrders, getOrder, updateOrder, deleteOrder, createOrderFromQuotation };
+const updateOrderStatus = async (req, res) => {
+    const { orderId } = req.params;
+    const { status } = req.body;
+
+    try {
+        // Verificar que el usuario tenga rol de admin
+        if (!req.user.roles.includes('admin')) {
+            return res.status(403).json({
+                success: false,
+                msg: "No tienes permiso para actualizar el estado de la orden"
+            });
+        }
+        // Validar que el status sea válido
+        const validStatuses = ["pending", "completed", "canceled", "finalized"];
+        if (!validStatuses.includes(status)) {
+            return res.status(400).json({
+                success: false,
+                msg: "Estado de orden no válido",
+                validStatuses
+            });
+        }
+
+        // Buscar y actualizar la orden
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return res.status(404).json({
+                success: false,
+                msg: "Orden no encontrada"
+            });
+        }
+
+        // Actualizar el estado
+        order.status = status;
+        await order.save();
+
+        // Poblar la información necesaria
+        await order.populate('shipping.carrier');
+        await order.populate('userId', 'firstName lastName email');
+
+        res.status(200).json({
+            success: true,
+            msg: "Estado de la orden actualizado correctamente",
+            order
+        });
+    } catch (error) {
+        console.error("Error al actualizar el estado de la orden:", error);
+        res.status(500).json({
+            success: false,
+            msg: "Error al actualizar el estado de la orden",
+            error: error.message
+        });
+    }
+};
+
+export { createOrder, getUserOrders, getOrders, getOrder, updateOrder, deleteOrder, createOrderFromQuotation, updateOrderStatus };
