@@ -1,15 +1,32 @@
-import express from 'express'
-import { products, getProduct, createProduct, updateProduct, deleteProduct, findProducts } from '../controllers/productController.js';
+import express from 'express';
+import { checkAuth, checkRole } from '../middleware/authMiddleware.js';
 import { validateProductRegistration, validateProductModificar, validateProductID } from '../middleware/validators/productValidators.js';
-import { checkAuth, checkRole, checkTokenBlacklist } from '../middleware/authMiddleware.js';
+import {
+    getProduct,
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    findProducts,
+    getActiveProducts,
+    getAllProductsAdmin,
+    updateProductStatus
+} from '../controllers/productController.js';
 
-const productRoutes = express.Router();
+const router = express.Router();
 
-productRoutes.get('/', products);
-productRoutes.get('/search', findProducts);
-productRoutes.get('/:_id', getProduct);
-productRoutes.post('/', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductRegistration, createProduct);
-productRoutes.put('/:_id', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductModificar, updateProduct);
-productRoutes.delete('/:_id', checkAuth, checkTokenBlacklist, checkRole('admin'), validateProductID, deleteProduct);
+// Rutas públicas
+router.get('/active', getActiveProducts);
+router.get('/search', findProducts);
+router.get('/:_id', validateProductID, getProduct);
 
-export { productRoutes };
+// Rutas protegidas que requieren autenticación
+router.use(checkAuth);
+
+// Rutas que requieren rol de administrador
+router.get('/admin/all', checkRole('admin'), getAllProductsAdmin);
+router.post('/', checkRole('admin'), validateProductRegistration, createProduct);
+router.put('/:_id', checkRole('admin'), validateProductModificar, updateProduct);
+router.delete('/:_id', checkRole('admin'), validateProductID, deleteProduct);
+router.put('/:_id/status', checkRole('admin'), updateProductStatus);
+
+export { router as productRoutes };

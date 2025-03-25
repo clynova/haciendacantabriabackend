@@ -323,4 +323,109 @@ const findProducts = async (req, res) => {
     }
 };
 
-export { products, getProduct, createProduct, updateProduct, deleteProduct, findProducts };
+const getActiveProducts = async (req, res) => {
+    try {
+        const { categoria, tipoProducto } = req.query;
+        const filter = { estado: true };
+
+        if (categoria) {
+            filter.categoria = categoria;
+        }
+
+        if (tipoProducto) {
+            filter.tipoProducto = tipoProducto;
+        }
+
+        const products = await ProductoBase.find(filter);
+        res.status(200).json({
+            success: true,
+            msg: 'Productos activos enviados',
+            count: products.length,
+            products
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ 
+            success: false, 
+            msg: "Error al obtener los productos activos" 
+        });
+    }
+};
+
+const getAllProductsAdmin = async (req, res) => {
+    try {
+        // Verificar que el usuario tenga rol de admin
+        if (!req.user.roles.includes('admin')) {
+            return res.status(403).json({
+                success: false,
+                msg: "No tienes permiso para ver todos los productos"
+            });
+        }
+
+        const products = await ProductoBase.find();
+        res.status(200).json({
+            success: true,
+            msg: 'Lista completa de productos',
+            count: products.length,
+            products
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({ 
+            success: false, 
+            msg: "Error al obtener la lista completa de productos" 
+        });
+    }
+};
+
+const updateProductStatus = async (req, res) => {
+    try {
+        // Verificar que el usuario tenga rol de admin
+        if (!req.user.roles.includes('admin')) {
+            return res.status(403).json({
+                success: false,
+                msg: "No tienes permiso para actualizar el estado del producto"
+            });
+        }
+
+        const { _id } = req.params;
+        const { estado } = req.body;
+
+        const product = await ProductoBase.findById(_id);
+        if (!product) {
+            return res.status(404).json({
+                success: false,
+                msg: "Producto no encontrado"
+            });
+        }
+
+        product.estado = estado;
+        product.fechaActualizacion = new Date();
+        await product.save();
+
+        res.status(200).json({
+            success: true,
+            msg: "Estado del producto actualizado correctamente",
+            product
+        });
+    } catch (err) {
+        console.error(err);
+        res.status(500).json({
+            success: false,
+            msg: "Error al actualizar el estado del producto",
+            error: err.message
+        });
+    }
+};
+
+export { 
+    products, 
+    getProduct, 
+    createProduct, 
+    updateProduct, 
+    deleteProduct, 
+    findProducts,
+    getActiveProducts,
+    getAllProductsAdmin,
+    updateProductStatus 
+};
