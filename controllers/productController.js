@@ -120,94 +120,86 @@ const createProduct = async (req, res) => {
 
 const updateProduct = async (req, res) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).send({
+        const productId = req.params._id || req.params.id;
+        
+        if (!productId) {
+            return res.status(400).json({
                 success: false,
-                msg: "Errores de validación",
-                errors: errors.array()
+                msg: 'ID de producto no proporcionado'
             });
         }
 
-        const { _id } = req.params;
+        const updateData = { ...req.body };
 
-        const existingProduct = await ProductoBase.findById(_id);
-        if (!existingProduct) {
-            return res.status(404).send({
-                success: false,
-                msg: "Producto no encontrado"
-            });
+        // Process tags
+        updateData.tags = Array.isArray(updateData.tags) 
+            ? updateData.tags.filter(tag => tag && tag.trim()).map(tag => tag.trim())
+            : [];
+
+        updateData.fechaActualizacion = new Date();
+
+        // Process boolean fields
+        updateData.estado = Boolean(updateData.estado);
+        updateData.destacado = Boolean(updateData.destacado);
+
+        if (updateData.conservacion) {
+            updateData.conservacion = {
+                ...updateData.conservacion,
+                requiereRefrigeracion: Boolean(updateData.conservacion.requiereRefrigeracion),
+                requiereCongelacion: Boolean(updateData.conservacion.requiereCongelacion)
+            };
         }
 
-        // No permitir cambiar el tipo de producto
-        if (req.body.tipoProducto && req.body.tipoProducto !== existingProduct.tipoProducto) {
-            return res.status(400).send({
-                success: false,
-                msg: "No se puede cambiar el tipo de producto"
-            });
-        }
+        // Remove calculated fields
+        delete updateData.precioFinal;
+        delete updateData.precioTransferencia;
+        delete updateData.precioPorKgFinal;
+        delete updateData.precioPorKgTransferencia;
+        delete updateData.__v;
 
-        // Realizar la actualización con el modelo correcto según el tipo
-        let ModeloProducto;
-        switch (existingProduct.tipoProducto) {
-            case 'ProductoCarne':
-                ModeloProducto = ProductoCarne;
-                break;
-            case 'ProductoAceite':
-                ModeloProducto = ProductoAceite;
-                break;
-            default:
-                ModeloProducto = ProductoBase;
-        }
-
-        const datosActualizacion = {
-            ...req.body,
-            fechaActualizacion: new Date()
-        };
-
-        // Gestión de etiquetas
-        if (tags) {
-            if (!Array.isArray(tags)) {
-                return res.status(400).json({
-                    success: false,
-                    msg: "El campo 'tags' debe ser un array de strings"
-                });
-            }
-
-            // Procesar tags
-            product.tags = tags
-                .filter(tag => typeof tag === 'string' && tag.trim().length > 0)
-                .map(tag => tag.trim());
-        }
-
-        const updatedProduct = await ModeloProducto.findByIdAndUpdate(
-            _id,
-            datosActualizacion,
-            {
+        const updatedProduct = await ProductoBase.findByIdAndUpdate(
+            productId,
+            updateData,
+            { 
                 new: true,
                 runValidators: true
             }
         );
 
-        res.status(200).send({
-            success: true,
-            msg: "Producto modificado correctamente",
-            data: updatedProduct
-        });
-
-    } catch (err) {
-        console.error(err);
-        if (err.code === 11000) {
-            res.status(400).send({
+        if (!updatedProduct) {
+            return res.status(404).json({
                 success: false,
-                msg: "Ya existe un producto con ese código o SKU"
-            });
-        } else {
-            res.status(500).send({
-                success: false,
-                msg: "Error al modificar el producto"
+                msg: 'Producto no encontrado'
             });
         }
+
+        res.json({
+            success: true,
+            msg: 'Producto actualizado exitosamente',
+            product: updatedProduct
+        });
+
+    } catch (error) {
+        if (error.name === 'ValidationError') {
+            return res.status(400).json({
+                success: false,
+                msg: 'Error de validación',
+                errors: Object.values(error.errors).map(err => err.message)
+            });
+        }
+
+        if (error.code === 11000) {
+            return res.status(400).json({
+                success: false,
+                msg: 'Ya existe un producto con ese código o SKU'
+            });
+        }
+
+        res.status(500).json({
+            success: false,
+            msg: 'Error al modificar el producto',
+            error: error.message
+        });
     }
 };
 
@@ -322,7 +314,6 @@ const findProducts = async (req, res) => {
         });
     }
 };
-
 const getActiveProducts = async (req, res) => {
     try {
         const { categoria, tipoProducto } = req.query;
