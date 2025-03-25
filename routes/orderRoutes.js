@@ -6,7 +6,8 @@ import {
     getOrder,
     updateOrder,
     deleteOrder,
-    createOrderFromQuotation
+    createOrderFromQuotation,
+    updateOrderStatus
 } from '../controllers/orderController.js';
 import { checkAuth, checkRole } from '../middleware/authMiddleware.js';
 import { validateOrder, validateOrderId, validateCreateOrderFromQuotation } from '../middleware/validators/orderValidators.js';
@@ -29,5 +30,6 @@ orderRoutes.get('/all', checkRole('admin'), getOrders);
 orderRoutes.get('/:orderId', checkRole('admin'), validateOrderId, getOrder);
 orderRoutes.put('/:orderId', checkRole('admin'), validateOrderId, updateOrder);
 orderRoutes.delete('/:orderId', checkRole('admin'), validateOrderId, deleteOrder);
+orderRoutes.put('/:orderId/status', checkRole('admin'), validateOrderId, updateOrderStatus);
 
 export { orderRoutes };
