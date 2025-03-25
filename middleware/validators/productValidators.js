@@ -1,5 +1,5 @@
 import { body, param } from 'express-validator';
-import { EstadoProducto, CategoriaProducto, TipoCarne, CorteVacuno, TipoAceite, MetodoCoccion, TipoEnvase } from '../../models/Product.js';
+import { CategoriaProducto, TipoCarne, CorteVacuno, TipoAceite, MetodoCoccion, TipoEnvase } from '../../models/Product.js';
 
 // Base product validation rules
 const baseProductValidationRules = [
@@ -22,10 +22,6 @@ const baseProductValidationRules = [
         .trim()
         .notEmpty().withMessage('La categoría es requerida')
         .isIn(CategoriaProducto).withMessage('Categoría no válida'),
-
-    body('estado')
-        .optional()
-        .isIn(EstadoProducto).withMessage('Estado no válido'),
 
     body('destacado')
         .optional()
@@ -135,7 +131,6 @@ const validateProductModificar = [
     body('sku').optional().trim().notEmpty().withMessage('El SKU no puede estar vacío'),
     body('nombre').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío'),
     body('categoria').optional().isIn(CategoriaProducto).withMessage('Categoría no válida'),
-    body('estado').optional().isIn(EstadoProducto).withMessage('Estado no válido'),
     body('tipoProducto').optional().isIn(['ProductoCarne', 'ProductoAceite']).withMessage('Tipo de producto no válido'),
     
     // Validaciones específicas para ProductoCarne

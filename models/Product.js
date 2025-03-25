@@ -2,7 +2,6 @@ import mongoose from "mongoose";
 const { Schema, model } = mongoose;
 
 // Enums
-const EstadoProducto = ['ACTIVO', 'INACTIVO', 'SIN_STOCK', 'PROXIMAMENTE'];
 const CategoriaProducto = ['CARNE', 'ACEITE', 'CONDIMENTO', 'ACCESORIO'];
 const TipoCarne = ['VACUNO', 'CERDO', 'POLLO', 'CORDERO', 'PAVO'];
 const CorteVacuno = [
@@ -64,9 +63,8 @@ const EsquemaProductoBase = new Schema({
         required: true
     },
     estado: {
-        type: String,
-        enum: EstadoProducto,
-        default: 'ACTIVO'
+        type: Boolean,
+        default: false
     },
     destacado: {
         type: Boolean,
@@ -438,4 +436,4 @@ const ProductoBase = mongoose.model('Producto', EsquemaProductoBase);
 const ProductoCarne = ProductoBase.discriminator('ProductoCarne', EsquemaProductoCarne);
 const ProductoAceite = ProductoBase.discriminator('ProductoAceite', EsquemaProductoAceite);
 
-export { ProductoBase, ProductoCarne, ProductoAceite, EstadoProducto, CategoriaProducto, TipoCarne, CorteVacuno, TipoAceite, MetodoCoccion, TipoEnvase };
+export { ProductoBase, ProductoCarne, ProductoAceite, CategoriaProducto, TipoCarne, CorteVacuno, TipoAceite, MetodoCoccion, TipoEnvase };
