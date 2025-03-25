@@ -28,7 +28,7 @@ const addToCart = async (req, res) => {
         }
 
         // Verificar si el producto está activo
-        if (product.estado !== 'ACTIVO') {
+        if (!product.estado) {
             return res.status(400).json({ success: false, msg: "Este producto no está disponible actualmente" });
         }
 
@@ -196,7 +196,7 @@ const loadCart = async (req, res) => {
 
         // Filtrar productos que ya no están activos o disponibles
         cart.products = cart.products.filter(item => 
-            item.productId && item.productId.estado === 'ACTIVO'
+            item.productId && item.productId.estado
         );
 
         // Si se eliminaron productos, actualizar el carrito
