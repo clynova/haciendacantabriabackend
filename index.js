@@ -17,6 +17,7 @@ import { orderRoutes } from './routes/orderRoutes.js';
 import { paymentProcessingRoutes } from './routes/paymentProcessingRoutes.js';
 import { utilRoutes } from './routes/utilRoutes.js';
 import { quotationRoutes } from './routes/quotationRoutes.js';
+import { regionRoutes } from './routes/regionRoutes.js';
 
 // Configurar rutas
 app.use('/api/user', userRoutes);
@@ -30,6 +31,7 @@ app.use('/api/order', orderRoutes);
 app.use('/api/payments', paymentProcessingRoutes);
 app.use('/api/quotations', quotationRoutes);
 app.use('/api/util', utilRoutes);
+app.use('/api/regions', regionRoutes);
 
 const PORT = process.env.PORT || 4000;
 
