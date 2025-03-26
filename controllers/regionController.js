@@ -3,6 +3,16 @@ import { Region } from '../models/Region.js';
 // Obtener todas las regiones
 const getRegions = async (req, res) => {
     try {
+        const regions = await Region.find({ isActive: true });
+        res.status(200).json({ success: true, data: regions });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ success: false, message: "Error al obtener las regiones" });
+    }
+};
+
+const getRegionsAll = async (req, res) => {
+    try {
         const regions = await Region.find();
         res.status(200).json({ success: true, data: regions });
     } catch (error) {
@@ -77,6 +87,45 @@ const updateRegion = async (req, res) => {
     }
 };
 
+// Actualizar el estado de una región
+const updateRegionStatus = async (req, res) => {
+    try {
+        const { isActive } = req.body;
+        
+        if (typeof isActive !== 'boolean') {
+            return res.status(400).json({ 
+                success: false, 
+                message: "El estado debe ser un valor booleano" 
+            });
+        }
+
+        const region = await Region.findByIdAndUpdate(
+            req.params.id,
+            { isActive },
+            { new: true }
+        );
+
+        if (!region) {
+            return res.status(404).json({ 
+                success: false, 
+                message: "Región no encontrada" 
+            });
+        }
+
+        res.status(200).json({ 
+            success: true, 
+            data: region,
+            message: `Región ${isActive ? 'activada' : 'desactivada'} exitosamente`
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ 
+            success: false, 
+            message: "Error al actualizar el estado de la región" 
+        });
+    }
+};
+
 // Eliminar una región
 const deleteRegion = async (req, res) => {
     try {
@@ -98,5 +147,7 @@ export {
     getRegionById,
     createRegion,
     updateRegion,
-    deleteRegion
+    deleteRegion,
+    updateRegionStatus,
+    getRegionsAll
 };
