@@ -10,7 +10,7 @@ const paymentMethodSchema = new mongoose.Schema(
         type: {
             type: String,
             required: true,
-            enum: ['transferencia', 'webpay', 'mercadopago', 'flow'],
+            enum: ['transferencia', 'webpay', 'flow'],
             trim: true
         },
         description: {

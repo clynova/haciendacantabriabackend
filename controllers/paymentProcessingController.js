@@ -2,7 +2,6 @@ import { Order } from '../models/Order.js';
 import { PaymentMethod } from '../models/PaymentMethod.js';
 import { validationResult } from 'express-validator';
 import * as webpayService from '../services/webpayService.js';
-import * as mercadoPagoService from '../services/mercadoPagoService.js';
 import { OrderDetail } from '../models/OrderDetail.js';
 import { ProductoBase } from '../models/Product.js';
 import dotenv from 'dotenv';
@@ -162,46 +161,6 @@ export const initiatePayment = async (req, res) => {
                 });
             }
 
-        } else if (paymentMethod.type === 'mercadopago') {
-            // Obtener los detalles de los productos en la orden
-            const orderDetails = await OrderDetail.find({ orderId: order._id }).populate('productId');
-
-            // Formatear items para MercadoPago
-            const items = await Promise.all(orderDetails.map(async (detail) => {
-                const producto = await ProductoBase.findById(detail.productId);
-                return {
-                    name: producto.nombre, // Usar el campo nombre en lugar de name
-                    price: detail.unitPrice,
-                    quantity: detail.quantity,
-                };
-            }));
-
-            // Datos del pagador
-            const user = req.user;
-            const payer = {
-                name: user.firstName + ' ' + user.lastName,
-                email: user.email,
-            };
-
-            // Iniciar transacción con MercadoPago
-            paymentResponse = await mercadoPagoService.createPayment(
-                { id: order._id.toString() },
-                items,
-                payer
-            );
-
-            // Actualizar orden con detalles iniciales de pago
-            order.payment.provider = 'mercadopago';
-            order.payment.status = 'processing';
-            await order.save();
-
-            return res.json({
-                success: true,
-                redirectUrl: paymentResponse.body.init_point,
-                preference_id: paymentResponse.body.id,
-                payment_type: 'mercadopago'
-            });
-
         } else {
             return res.status(400).json({ success: false, msg: "Método de pago no soportado" });
         }
@@ -296,65 +255,7 @@ export const processWebpayReturn = async (req, res) => {
     }
 };
 
-/**
- * Procesa el webhook de MercadoPago
- * @param {Object} req - Request de Express
- * @param {Object} res - Response de Express
- */
-export const processMercadoPagoWebhook = async (req, res) => {
-    try {
-        const webhookData = req.body;
 
-        // Procesar notificación
-        const paymentData = await mercadoPagoService.processWebhook(webhookData);
-
-        if (paymentData) {
-            // Extraer el orderId
-            const orderId = paymentData.external_reference;
-
-            // Buscar la orden
-            const order = await Order.findById(orderId);
-            if (!order) {
-                return res.status(404).json({ error: 'Orden no encontrada' });
-            }
-
-            // Actualizar estado de la orden según estado del pago
-            switch (paymentData.status) {
-                case 'approved':
-                    order.payment.status = 'completed';
-                    order.payment.transactionId = paymentData.paymentId;
-                    order.payment.paymentDetails = paymentData;
-                    order.payment.paymentDate = new Date();
-                    // Mantener los valores de comisión existentes
-                    order.status = 'completed';
-                    break;
-
-                case 'pending':
-                case 'in_process':
-                    order.payment.status = 'processing';
-                    order.payment.paymentDetails = paymentData;
-                    break;
-
-                case 'rejected':
-                case 'cancelled':
-                case 'refunded':
-                    order.payment.status = 'failed';
-                    order.payment.paymentDetails = paymentData;
-                    order.status = 'canceled';
-                    break;
-            }
-
-            await order.save();
-        }
-
-        // Siempre responder 200 al webhook
-        return res.status(200).json({ received: true });
-
-    } catch (error) {
-        console.error('Error procesando webhook de MercadoPago:', error);
-        res.status(500).json({ error: 'Error procesando la notificación' });
-    }
-};
 
 /**
  * Obtiene el estado de un pago

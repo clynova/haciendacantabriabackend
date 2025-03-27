@@ -3,7 +3,6 @@ import { checkAuth, checkRole } from '../middleware/authMiddleware.js';
 import {
     initiatePayment,
     processWebpayReturn,
-    processMercadoPagoWebhook,
     getPaymentStatus,
     updateReturnUrl
 } from '../controllers/paymentProcessingController.js';
@@ -32,7 +31,6 @@ paymentProcessingRoutes.route('/webpay/return')
     .get(processWebpayReturn)
     .post(processWebpayReturn);
 
-// Rutas para MercadoPago
-paymentProcessingRoutes.post('/mercadopago/webhook', processMercadoPagoWebhook);
+
 
 export { paymentProcessingRoutes }; 
