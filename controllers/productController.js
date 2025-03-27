@@ -75,6 +75,9 @@ const createProduct = async (req, res) => {
             case 'ProductoAceite':
                 ProductModel = ProductoAceite;
                 break;
+            case 'ProductoBase':
+                ProductModel = ProductoBase;
+                break;
             default:
                 return res.status(400).send({
                     success: false,
@@ -121,7 +124,7 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const productId = req.params._id || req.params.id;
-        
+
         if (!productId) {
             return res.status(400).json({
                 success: false,
@@ -132,7 +135,7 @@ const updateProduct = async (req, res) => {
         const updateData = { ...req.body };
 
         // Process tags
-        updateData.tags = Array.isArray(updateData.tags) 
+        updateData.tags = Array.isArray(updateData.tags)
             ? updateData.tags.filter(tag => tag && tag.trim()).map(tag => tag.trim())
             : [];
 
@@ -160,7 +163,7 @@ const updateProduct = async (req, res) => {
         const updatedProduct = await ProductoBase.findByIdAndUpdate(
             productId,
             updateData,
-            { 
+            {
                 new: true,
                 runValidators: true
             }
@@ -336,9 +339,9 @@ const getActiveProducts = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ 
-            success: false, 
-            msg: "Error al obtener los productos activos" 
+        res.status(500).json({
+            success: false,
+            msg: "Error al obtener los productos activos"
         });
     }
 };
@@ -362,9 +365,9 @@ const getAllProductsAdmin = async (req, res) => {
         });
     } catch (err) {
         console.error(err);
-        res.status(500).json({ 
-            success: false, 
-            msg: "Error al obtener la lista completa de productos" 
+        res.status(500).json({
+            success: false,
+            msg: "Error al obtener la lista completa de productos"
         });
     }
 };
@@ -409,14 +412,14 @@ const updateProductStatus = async (req, res) => {
     }
 };
 
-export { 
-    products, 
-    getProduct, 
-    createProduct, 
-    updateProduct, 
-    deleteProduct, 
+export {
+    products,
+    getProduct,
+    createProduct,
+    updateProduct,
+    deleteProduct,
     findProducts,
     getActiveProducts,
     getAllProductsAdmin,
-    updateProductStatus 
+    updateProductStatus
 };
