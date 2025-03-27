@@ -2,7 +2,7 @@ import mongoose from "mongoose";
 const { Schema, model } = mongoose;
 
 // Enums
-const CategoriaProducto = ['CARNE', 'ACEITE', 'CONDIMENTO', 'ACCESORIO'];
+const CategoriaProducto = ['CARNE', 'ACEITE', 'CONDIMENTO', 'ACCESORIO', 'OTRO'];
 const TipoCarne = ['VACUNO', 'CERDO', 'POLLO', 'CORDERO', 'PAVO'];
 const CorteVacuno = [
     // Cortes Argentinos
@@ -32,13 +32,6 @@ const TipoEnvase = ['VACIO', 'CAJA', 'BOTELLA', 'BIDON', 'BOLSA'];
 
 // Base Product Schema
 const EsquemaProductoBase = new Schema({
-    codigo: {
-        type: String,
-        required: true,
-        unique: true,
-        trim: true,
-        index: true
-    },
     sku: {
         type: String,
         required: true,
@@ -91,27 +84,6 @@ const EsquemaProductoBase = new Schema({
                 default: 0,
                 min: 0,
                 max: 100
-            },
-            transferencia: {
-                type: Number,
-                default: 0,
-                min: 0,
-                max: 100
-            },
-            promocion: {
-                porcentaje: {
-                    type: Number,
-                    default: 0,
-                    min: 0,
-                    max: 100
-                },
-                fechaInicio: Date,
-                fechaFin: Date,
-                activa: {
-                    type: Boolean,
-                    default: false
-                },
-                nombre: String
             }
         }
     },
@@ -158,19 +130,19 @@ const EsquemaProductoBase = new Schema({
         type: Map,
         of: Schema.Types.Mixed
     },
-    relacionados: {
-        productosSimilares: [{
-            type: Schema.Types.ObjectId,
-            ref: 'Producto'
-        }],
-        productosComplementarios: [{
-            type: Schema.Types.ObjectId,
-            ref: 'Producto'
-        }],
-        compradosJuntos: [{
-            type: Schema.Types.ObjectId,
-            ref: 'Producto'
-        }]
+    inventario: {
+        stockUnidades: {
+            type: Number,
+            min: 0
+        },
+        umbralStockBajo: {
+            type: Number,
+            default: 5
+        },
+        ultimaActualizacion: {
+            type: Date,
+            default: Date.now
+        }
     },
     tags: [{ type: String, trim: true }],
     fechaCreacion: { type: Date, default: Date.now },
@@ -196,12 +168,7 @@ const EsquemaProductoCarne = new Schema({
             enum: CorteVacuno
         },
         nombreArgentino: String,
-        nombreChileno: String,
-        precioPorKg: {
-            type: Number,
-            required: true,
-            min: 0
-        }
+        nombreChileno: String
     },
     caracteristicas: {
         porcentajeGrasa: {
@@ -302,25 +269,7 @@ const EsquemaProductoCarne = new Schema({
         fechaVencimiento: Date,
         numeroLote: String
     },
-    inventario: {
-        stockKg: {
-            type: Number,
-            required: true,
-            min: 0
-        },
-        stockUnidades: {
-            type: Number,
-            min: 0
-        },
-        umbralStockBajo: {
-            type: Number,
-            default: 5
-        },
-        ultimaActualizacion: {
-            type: Date,
-            default: Date.now
-        }
-    }
+
 });
 
 // Oil Product Schema
@@ -370,22 +319,7 @@ const EsquemaProductoAceite = new Schema({
         },
         precio: Number,
         sku: String
-    }],
-    inventario: {
-        stockUnidades: {
-            type: Number,
-            required: true,
-            min: 0
-        },
-        umbralStockBajo: {
-            type: Number,
-            default: 10
-        },
-        ultimaActualizacion: {
-            type: Date,
-            default: Date.now
-        }
-    }
+    }]
 });
 
 // Virtuals
