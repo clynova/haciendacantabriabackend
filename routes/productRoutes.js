@@ -9,7 +9,8 @@ import {
     findProducts,
     getActiveProducts,
     getAllProductsAdmin,
-    updateProductStatus
+    updateProductStatus,
+    notificarProductoFavorito
 } from '../controllers/productController.js';
 
 const router = express.Router();
@@ -28,5 +29,6 @@ router.post('/', checkRole('admin'), validateProductRegistration, createProduct)
 router.put('/:_id', checkRole('admin'), validateProductModificar, updateProduct);
 router.delete('/:_id', checkRole('admin'), validateProductID, deleteProduct);
 router.put('/:_id/status', checkRole('admin'), updateProductStatus);
+router.post('/:_id/notificar-favoritos', checkRole('admin'), validateProductID, notificarProductoFavorito);
 
 export { router as productRoutes };
