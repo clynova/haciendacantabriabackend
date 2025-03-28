@@ -91,7 +91,7 @@ const createOrder = async (req, res) => {
                 }
             } else {
                 // Para otros tipos de productos, verificamos usando el campo que corresponda
-                if ((producto.inventario && producto.inventario.stockUnidades < item.quantity) || producto.estado === 'SIN_STOCK') {
+                if ((producto.inventario && producto.inventario.stockUnidades < item.quantity) || producto.estado === false) {
                     return res.status(400).json({ success: false, msg: `Stock insuficiente para el producto: ${producto.nombre}` });
                 }
             }
@@ -213,15 +213,6 @@ const createOrder = async (req, res) => {
                 if (producto.inventario && producto.inventario.stockUnidades !== undefined) {
                     await ProductoBase.findByIdAndUpdate(item.productId, { $inc: { 'inventario.stockUnidades': -item.quantity } });
                 }
-            }
-            
-            // Verificar si se debe cambiar el estado a SIN_STOCK
-            if (producto.tipoProducto === 'ProductoCarne' && producto.inventario.stockUnidades - item.quantity <= 0) {
-                await ProductoBase.findByIdAndUpdate(item.productId, { estado: false });
-            } else if (producto.tipoProducto === 'ProductoAceite' && producto.inventario.stockUnidades - item.quantity <= 0) {
-                await ProductoBase.findByIdAndUpdate(item.productId, { estado: false });
-            } else if (producto.inventario && producto.inventario.stockUnidades - item.quantity <= 0) {
-                await ProductoBase.findByIdAndUpdate(item.productId, { estado: false });
             }
         }
 
