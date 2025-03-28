@@ -124,7 +124,7 @@ const createProduct = async (req, res) => {
 const updateProduct = async (req, res) => {
     try {
         const productId = req.params._id || req.params.id;
-
+        
         if (!productId) {
             return res.status(400).json({
                 success: false,
@@ -132,47 +132,95 @@ const updateProduct = async (req, res) => {
             });
         }
 
-        const updateData = { ...req.body };
+        // Primero, obtener el producto existente y su tipo
+        const existingProduct = await ProductoBase.findById(productId);
+        if (!existingProduct) {
+            return res.status(404).json({
+                success: false,
+                msg: 'Producto no encontrado'
+            });
+        }
 
-        // Process tags
-        updateData.tags = Array.isArray(updateData.tags)
-            ? updateData.tags.filter(tag => tag && tag.trim()).map(tag => tag.trim())
-            : [];
+        // Seleccionar el modelo correcto basado en el tipo de producto
+        let ProductModel;
+        switch (existingProduct.tipoProducto) {
+            case 'ProductoCarne':
+                ProductModel = ProductoCarne;
+                break;
+            case 'ProductoAceite':
+                ProductModel = ProductoAceite;
+                break;
+            default:
+                ProductModel = ProductoBase;
+        }
 
-        updateData.fechaActualizacion = new Date();
+        // Crear el objeto de actualización
+        let updateData = {
+            ...req.body,
+            fechaActualizacion: new Date()
+        };
 
-        // Process boolean fields
-        updateData.estado = Boolean(updateData.estado);
-        updateData.destacado = Boolean(updateData.destacado);
-
-        if (updateData.conservacion) {
-            updateData.conservacion = {
-                ...updateData.conservacion,
-                requiereRefrigeracion: Boolean(updateData.conservacion.requiereRefrigeracion),
-                requiereCongelacion: Boolean(updateData.conservacion.requiereCongelacion)
+        // Procesar campos específicos según el tipo de producto
+        if (existingProduct.tipoProducto === 'ProductoAceite') {
+            updateData = {
+                ...updateData,
+                infoAceite: {
+                    tipo: req.body.infoAceite?.tipo || existingProduct.infoAceite?.tipo,
+                    volumen: Number(req.body.infoAceite?.volumen) || existingProduct.infoAceite?.volumen,
+                    envase: req.body.infoAceite?.envase || existingProduct.infoAceite?.envase
+                },
+                caracteristicas: {
+                    aditivos: Array.isArray(req.body.caracteristicas?.aditivos) 
+                        ? req.body.caracteristicas.aditivos 
+                        : existingProduct.caracteristicas?.aditivos || [],
+                    filtracion: req.body.caracteristicas?.filtracion || existingProduct.caracteristicas?.filtracion,
+                    acidez: req.body.caracteristicas?.acidez || existingProduct.caracteristicas?.acidez,
+                    extraccion: req.body.caracteristicas?.extraccion || existingProduct.caracteristicas?.extraccion
+                }
+            };
+        } else if (existingProduct.tipoProducto === 'ProductoCarne') {
+            updateData = {
+                ...updateData,
+                infoCarne: {
+                    tipoCarne: req.body.infoCarne?.tipoCarne || existingProduct.infoCarne?.tipoCarne,
+                    corte: req.body.infoCarne?.corte || existingProduct.infoCarne?.corte,
+                    nombreArgentino: req.body.infoCarne?.nombreArgentino || existingProduct.infoCarne?.nombreArgentino,
+                    nombreChileno: req.body.infoCarne?.nombreChileno || existingProduct.infoCarne?.nombreChileno
+                },
+                caracteristicas: {
+                    porcentajeGrasa: req.body.caracteristicas?.porcentajeGrasa || existingProduct.caracteristicas?.porcentajeGrasa,
+                    marmoleo: req.body.caracteristicas?.marmoleo || existingProduct.caracteristicas?.marmoleo,
+                    color: req.body.caracteristicas?.color || existingProduct.caracteristicas?.color,
+                    textura: Array.isArray(req.body.caracteristicas?.textura) 
+                        ? req.body.caracteristicas.textura 
+                        : existingProduct.caracteristicas?.textura || []
+                }
             };
         }
 
-        // Remove calculated fields
+        // Eliminar campos que no deben actualizarse
+        delete updateData._id;
+        delete updateData.__v;
+        delete updateData.fechaCreacion;
+        delete updateData.tipoProducto; // Prevenir cambio de tipo
         delete updateData.precioFinal;
         delete updateData.precioTransferencia;
-        delete updateData.precioPorKgFinal;
-        delete updateData.precioPorKgTransferencia;
-        delete updateData.__v;
 
-        const updatedProduct = await ProductoBase.findByIdAndUpdate(
+        // Actualizar el producto usando el modelo correcto
+        const updatedProduct = await ProductModel.findByIdAndUpdate(
             productId,
             updateData,
-            {
+            { 
                 new: true,
-                runValidators: true
+                runValidators: true,
+                context: 'query'
             }
         );
 
         if (!updatedProduct) {
             return res.status(404).json({
                 success: false,
-                msg: 'Producto no encontrado'
+                msg: 'Error al actualizar el producto'
             });
         }
 
@@ -183,18 +231,13 @@ const updateProduct = async (req, res) => {
         });
 
     } catch (error) {
-        if (error.name === 'ValidationError') {
-            return res.status(400).json({
-                success: false,
-                msg: 'Error de validación',
-                errors: Object.values(error.errors).map(err => err.message)
-            });
-        }
-
+        console.error('Error updating product:', error);
+        
         if (error.code === 11000) {
             return res.status(400).json({
                 success: false,
-                msg: 'Ya existe un producto con ese código o SKU'
+                msg: 'Ya existe un producto con ese SKU o slug',
+                error: error.keyValue
             });
         }
 
