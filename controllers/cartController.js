@@ -33,7 +33,7 @@ const addToCart = async (req, res) => {
         }
 
         // Verificar stock según el tipo de producto
-        if (product.tipoProducto === 'ProductoCarne' && product.inventario.stockKg < 0) {
+        if (product.tipoProducto === 'ProductoCarne' && product.inventario.stockUnidades < 0) {
             return res.status(400).json({ success: false, msg: "Producto sin stock disponible" });
         } else if (product.tipoProducto === 'ProductoAceite' && product.inventario.stockUnidades < quantity) {
             return res.status(400).json({ success: false, msg: "Stock insuficiente" });
