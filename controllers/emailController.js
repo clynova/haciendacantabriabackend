@@ -258,6 +258,301 @@ const generarEmailRecuperacionHTML = ({ firstName, token }) => {
   `;
 };
 
+// Función para generar el HTML del email de notificación de producto favorito
+const generarEmailProductoFavoritoHTML = ({ usuario, producto }) => {
+  const { firstName } = usuario;
+  const { nombre, descripcion, precios, multimedia, slug } = producto;
+  
+  // Obtener la imagen principal del producto o la primera disponible
+  const imagen = multimedia?.imagenes?.find(img => img.esPrincipal)?.url || 
+                 multimedia?.imagenes?.[0]?.url || 
+                 'https://via.placeholder.com/400x300?text=Producto';
+  
+  // Calcular el precio con descuentos
+  const precioBase = precios?.base || 0;
+  const descuento = precios?.descuentos?.regular || 0;
+  const precioFinal = precioBase * (1 - (descuento / 100));
+  
+  // Crear URL del producto
+  const productoUrl = `${process.env.FRONTEND_URL}/productos/${slug}`;
+  
+  // Texto descriptivo (limitado a 2 líneas aproximadamente)
+  const descripcionCorta = descripcion?.corta || 
+    (descripcion?.completa ? descripcion.completa.substring(0, 120) + '...' : 'Descubre este increíble producto');
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Producto destacado: ${nombre}</title>
+      <style>
+        /* Estilos para un diseño moderno y responsive */
+        body {
+          font-family: 'Helvetica Neue', Arial, sans-serif;
+          margin: 0;
+          padding: 0;
+          background-color: #f9f9f9;
+          color: #333;
+        }
+        .container {
+          max-width: 600px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+        }
+        .header {
+          background-color: #2C3E50;
+          padding: 30px 20px;
+          text-align: center;
+        }
+        .header-text {
+          font-size: 24px;
+          font-weight: 700;
+          color: #ffffff;
+          margin: 0;
+          letter-spacing: 0.5px;
+        }
+        .subheader {
+          font-size: 16px;
+          color: rgba(255, 255, 255, 0.8);
+          margin-top: 5px;
+        }
+        .content {
+          padding: 30px 20px;
+        }
+        .greeting {
+          font-size: 18px;
+          margin-bottom: 20px;
+        }
+        .product-container {
+          background: #f5f7fa;
+          border-radius: 6px;
+          padding: 20px;
+          margin-bottom: 25px;
+        }
+        .product-image {
+          width: 100%;
+          height: auto;
+          border-radius: 6px;
+          margin-bottom: 15px;
+        }
+        .product-name {
+          font-size: 22px;
+          font-weight: 600;
+          margin: 5px 0;
+        }
+        .product-description {
+          font-size: 16px;
+          line-height: 1.5;
+          color: #666;
+          margin-bottom: 15px;
+        }
+        .product-price-container {
+          margin: 15px 0;
+        }
+        .product-price {
+          font-size: 24px;
+          font-weight: bold;
+          color: #2C3E50;
+        }
+        .button-container {
+          text-align: center;
+          margin: 25px 0 10px;
+        }
+        .button {
+          display: inline-block;
+          background-color: #E74C3C;
+          color: white;
+          font-weight: bold;
+          text-decoration: none;
+          padding: 12px 30px;
+          border-radius: 50px;
+          text-transform: uppercase;
+          letter-spacing: 1px;
+          transition: all 0.3s ease;
+        }
+        .button:hover {
+          background-color: #C0392B;
+        }
+        .footer {
+          background-color: #f5f5f5;
+          padding: 20px;
+          text-align: center;
+          font-size: 14px;
+          color: #999;
+        }
+        .social-links {
+          margin-bottom: 15px;
+        }
+        .social-icon {
+          margin: 0 10px;
+          display: inline-block;
+          width: 32px;
+          height: 32px;
+        }
+        
+        /* Media queries para dispositivos móviles */
+        @media only screen and (max-width: 480px) {
+          .container {
+            width: 100%;
+            border-radius: 0;
+          }
+          .content {
+            padding: 20px 15px;
+          }
+          .header-text {
+            font-size: 20px;
+          }
+          .product-name {
+            font-size: 20px;
+          }
+          .product-price {
+            font-size: 22px;
+          }
+          .button {
+            padding: 10px 20px;
+            font-size: 14px;
+            width: 100%;
+            box-sizing: border-box;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 class="header-text">¡Te interesará este producto!</h1>
+          <p class="subheader">Hacienda Cantabria</p>
+        </div>
+        
+        <div class="content">
+          <p class="greeting">
+          Hola ${firstName},</p>
+          <div class="product-container">
+            <img class="product-image" src="${imagen}" alt="${nombre}">
+            <h2 class="product-name">${nombre}</h2>
+            <p class="product-description">${descripcionCorta}</p>
+            <div class="product-price-container">
+              <span class="product-price">$${precioFinal.toFixed(2)}</span>
+            </div>
+          </div>
+          <div class="button-container">
+            <a class="button" href="${productoUrl}">Ver producto</a>
+          </div>
+        </div>
+        
+        <div class="footer">
+          <p>Gracias por ser parte de Hacienda Cantabria.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Envía emails a todos los usuarios que tienen un producto específico en su lista de favoritos
+ * @param {string} productoId - ID del producto
+ * @returns {Promise<Object>} - Resultado con el número de emails enviados y detalles
+ */
+const enviarEmailProductoFavorito = async (productoId) => {
+  try {
+    if (!productoId) {
+      throw new Error('ID de producto no proporcionado');
+    }
+
+    // Importar los modelos necesarios
+    const { Wishlist } = await import('../models/Wishlist.js');
+    const { User } = await import('../models/User.js');
+    const { ProductoBase } = await import('../models/Product.js');
+
+    // Obtener el producto
+    const producto = await ProductoBase.findById(productoId);
+    if (!producto) {
+      throw new Error(`Producto con ID ${productoId} no encontrado`);
+    }
+
+    // Encontrar todas las listas de deseos que incluyen este producto
+    const wishlists = await Wishlist.find({ 
+      products: { $in: [productoId] } 
+    }).populate('userId');
+
+    if (!wishlists || wishlists.length === 0) {
+      return { 
+        success: true, 
+        enviados: 0, 
+        mensaje: 'No hay usuarios con este producto en su lista de favoritos' 
+      };
+    }
+
+    // Configurar el transportador de email
+    const transporter = createTransporter();
+    const resultados = {
+      success: true,
+      enviados: 0,
+      fallidos: 0,
+      detalles: []
+    };
+
+    // Preparar y enviar emails a cada usuario
+    for (const wishlist of wishlists) {
+      // Verificar que tengamos información del usuario
+      const usuario = wishlist.userId;
+      if (!usuario || !usuario.email) {
+        resultados.fallidos++;
+        resultados.detalles.push({
+          wishlistId: wishlist._id,
+          error: 'No se pudo obtener información del usuario'
+        });
+        continue;
+      }
+
+      // Generar el contenido del email
+      const htmlContent = generarEmailProductoFavoritoHTML({
+        usuario,
+        producto
+      });
+
+      // Configurar opciones del email
+      const mailOptions = {
+        from: `"Hacienda Cantabria" <${process.env.EMAIL_FROM}>`,
+        to: usuario.email,
+        subject: `¡${producto.nombre} te está esperando! 🔥`,
+        html: htmlContent
+      };
+
+      try {
+        // Enviar el email
+        await transporter.sendMail(mailOptions);
+        resultados.enviados++;
+        resultados.detalles.push({
+          usuarioId: usuario._id,
+          email: usuario.email,
+          estado: 'enviado'
+        });
+      } catch (error) {
+        console.error(`Error al enviar email a ${usuario.email}:`, error);
+        resultados.fallidos++;
+        resultados.detalles.push({
+          usuarioId: usuario._id,
+          email: usuario.email,
+          estado: 'fallido',
+          error: error.message
+        });
+      }
+    }
+
+    return resultados;
+  } catch (error) {
+    console.error('Error en enviarEmailProductoFavorito:', error);
+    throw error;
+  }
+};
+
 // Función para enviar email de confirmación de cuenta
 const enviarEmailConfirmacion = async (usuario) => {
   try {
@@ -326,7 +621,10 @@ const enviarEmailRecuperacion = async (usuario) => {
   }
 };
 
+// Exportar las funciones de email
 export {
   enviarEmailConfirmacion,
-  enviarEmailRecuperacion
+  enviarEmailRecuperacion,
+  generarEmailProductoFavoritoHTML,
+  enviarEmailProductoFavorito
 };

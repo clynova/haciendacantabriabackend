@@ -412,6 +412,44 @@ const updateProductStatus = async (req, res) => {
     }
 };
 
+/**
+ * Envía correos electrónicos a todos los usuarios que tienen un producto en su lista de favoritos
+ * @param {Object} req - Objeto de solicitud
+ * @param {Object} res - Objeto de respuesta
+ */
+const notificarProductoFavorito = async (req, res) => {
+    try {
+        // Verificar que el usuario tenga rol de admin
+        if (!req.user.roles.includes('admin')) {
+            return res.status(403).json({
+                success: false,
+                msg: "No tienes permiso para realizar esta acción"
+            });
+        }
+
+        const { _id } = req.params;
+        
+        // Importar la función de envío de emails
+        const { enviarEmailProductoFavorito } = await import('../controllers/emailController.js');
+        
+        // Enviar emails a usuarios con este producto en favoritos
+        const resultado = await enviarEmailProductoFavorito(_id);
+        
+        res.status(200).json({
+            success: true,
+            msg: "Notificaciones enviadas correctamente",
+            resultado
+        });
+    } catch (error) {
+        console.error('Error al enviar notificaciones:', error);
+        res.status(500).json({
+            success: false,
+            msg: "Error al enviar notificaciones",
+            error: error.message
+        });
+    }
+};
+
 export {
     products,
     getProduct,
@@ -421,5 +459,6 @@ export {
     findProducts,
     getActiveProducts,
     getAllProductsAdmin,
-    updateProductStatus
+    updateProductStatus,
+    notificarProductoFavorito
 };
