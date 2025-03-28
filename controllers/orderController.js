@@ -81,7 +81,7 @@ const createOrder = async (req, res) => {
             // Verificar stock según el tipo de producto
             if (producto.tipoProducto === 'ProductoCarne') {
                 // Para productos de carne, verificamos el stock en kg
-                if (producto.inventario.stockKg < item.quantity) {
+                if (producto.inventario.stockUnidades < item.quantity) {
                     return res.status(400).json({ success: false, msg: `Stock insuficiente para el producto: ${producto.nombre}` });
                 }
             } else if (producto.tipoProducto === 'ProductoAceite') {
@@ -205,7 +205,7 @@ const createOrder = async (req, res) => {
             
             // Actualizar stock según el tipo de producto
             if (producto.tipoProducto === 'ProductoCarne') {
-                await ProductoBase.findByIdAndUpdate(item.productId, { $inc: { 'inventario.stockKg': -item.quantity } });
+                await ProductoBase.findByIdAndUpdate(item.productId, { $inc: { 'inventario.stockUnidades': -item.quantity } });
             } else if (producto.tipoProducto === 'ProductoAceite') {
                 await ProductoBase.findByIdAndUpdate(item.productId, { $inc: { 'inventario.stockUnidades': -item.quantity } });
             } else {
@@ -216,12 +216,12 @@ const createOrder = async (req, res) => {
             }
             
             // Verificar si se debe cambiar el estado a SIN_STOCK
-            if (producto.tipoProducto === 'ProductoCarne' && producto.inventario.stockKg - item.quantity <= 0) {
-                await ProductoBase.findByIdAndUpdate(item.productId, { estado: 'SIN_STOCK' });
+            if (producto.tipoProducto === 'ProductoCarne' && producto.inventario.stockUnidades - item.quantity <= 0) {
+                await ProductoBase.findByIdAndUpdate(item.productId, { estado: false });
             } else if (producto.tipoProducto === 'ProductoAceite' && producto.inventario.stockUnidades - item.quantity <= 0) {
-                await ProductoBase.findByIdAndUpdate(item.productId, { estado: 'SIN_STOCK' });
+                await ProductoBase.findByIdAndUpdate(item.productId, { estado: false });
             } else if (producto.inventario && producto.inventario.stockUnidades - item.quantity <= 0) {
-                await ProductoBase.findByIdAndUpdate(item.productId, { estado: 'SIN_STOCK' });
+                await ProductoBase.findByIdAndUpdate(item.productId, { estado: false });
             }
         }
 
@@ -603,7 +603,7 @@ const createOrderFromQuotation = async (req, res) => {
             if (producto) {
                 if (producto.tipoProducto === 'ProductoCarne') {
                     await ProductoBase.findByIdAndUpdate(detail.productId, 
-                        { $inc: { 'inventario.stockKg': -detail.quantity } });
+                        { $inc: { 'inventario.stockUnidades': -detail.quantity } });
                 } else {
                     await ProductoBase.findByIdAndUpdate(detail.productId, 
                         { $inc: { 'inventario.stockUnidades': -detail.quantity } });
