@@ -1,5 +1,6 @@
 import { ProductoBase, ProductoCarne, ProductoAceite } from "../models/Product.js";
 import { validationResult } from 'express-validator';
+import mongoose from 'mongoose';
 
 const products = async (req, res) => {
     try {
@@ -30,10 +31,24 @@ const products = async (req, res) => {
 const getProduct = async (req, res) => {
     try {
         const { _id } = req.params;
-        const product = await ProductoBase.findById(_id);
+        
+        // Try to find by ID first, if it's a valid MongoDB ObjectId
+        const isValidObjectId = mongoose.Types.ObjectId.isValid(_id);
+        let product;
+        
+        if (isValidObjectId) {
+            product = await ProductoBase.findById(_id);
+        }
+        
+        // If no product found by ID or ID is invalid, try to find by slug
+        if (!product) {
+            product = await ProductoBase.findOne({ slug: _id });
+        }
+
         if (!product) {
             return res.status(404).send({ success: false, msg: "El producto no existe" });
         }
+
         res.status(200).send({ success: true, msg: 'Producto enviado', product });
     } catch (err) {
         console.error(err);
