@@ -274,7 +274,7 @@ const generarEmailProductoFavoritoHTML = ({ usuario, producto }) => {
   const precioFinal = precioBase * (1 - (descuento / 100));
   
   // Crear URL del producto
-  const productoUrl = `${process.env.FRONTEND_URL}/productos/${slug}`;
+  const productoUrl = `${process.env.FRONTEND_URL}product/${slug}`;
   
   // Texto descriptivo (limitado a 2 líneas aproximadamente)
   const descripcionCorta = descripcion?.corta || 
