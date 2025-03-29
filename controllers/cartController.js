@@ -187,7 +187,7 @@ const loadCart = async (req, res) => {
             .populate({
                 path: 'products.productId',
                 model: ProductoBase,
-                select: 'nombre codigo sku categoria estado precios multimedia tipoProducto infoCarne infoAceite'
+                select: 'nombre codigo sku categoria estado precios multimedia tipoProducto infoCarne infoAceite slug'
             });
 
         if (!cart) {
