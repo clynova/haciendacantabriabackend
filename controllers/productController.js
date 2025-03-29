@@ -67,6 +67,9 @@ const createProduct = async (req, res) => {
             });
         }
 
+        // Log the body for debugging
+        console.log("Datos del producto a crear:", JSON.stringify(req.body, null, 2));
+
         // Validar tags si están presentes
         if (req.body.tags && !Array.isArray(req.body.tags)) {
             return res.status(400).send({
@@ -82,6 +85,35 @@ const createProduct = async (req, res) => {
                 .map(tag => tag.trim());
         }
 
+        // Validar precios - asegurarse de que sean números
+        if (req.body.precios) {
+            if (req.body.precios.base && typeof req.body.precios.base !== 'number') {
+                req.body.precios.base = Number(req.body.precios.base);
+            }
+            if (req.body.precios.descuentos && req.body.precios.descuentos.regular && 
+                typeof req.body.precios.descuentos.regular !== 'number') {
+                req.body.precios.descuentos.regular = Number(req.body.precios.descuentos.regular);
+            }
+        }
+
+        // Verificar si ya existe un producto con el mismo SKU o slug
+        const existingProduct = await ProductoBase.findOne({
+            $or: [
+                { sku: req.body.sku },
+                { slug: req.body.slug }
+            ]
+        });
+
+        if (existingProduct) {
+            return res.status(400).json({
+                success: false,
+                msg: existingProduct.sku === req.body.sku 
+                    ? "Ya existe un producto con este SKU"
+                    : "Ya existe un producto con este slug"
+            });
+        }
+
+        // Seleccionar el modelo apropiado según el tipo de producto
         let ProductModel;
         switch (req.body.tipoProducto) {
             case 'ProductoCarne':
@@ -100,6 +132,7 @@ const createProduct = async (req, res) => {
                 });
         }
 
+        // Crear y guardar el producto
         const product = new ProductModel(req.body);
         const savedProduct = await product.save();
 
@@ -110,29 +143,36 @@ const createProduct = async (req, res) => {
         });
 
     } catch (error) {
-        if (error.code === 11000) {
+        console.error("Error al crear producto:", error);
+        
+        // Manejar errores de validación de MongoDB
+        if (error.name === 'ValidationError') {
             return res.status(400).json({
                 success: false,
-                code: 11000,
+                msg: "Error de validación",
+                errors: Object.values(error.errors).map(e => e.message)
+            });
+        }
+        
+        // Manejar errores de clave duplicada
+        if (error.code === 11000) {
+            const field = Object.keys(error.keyPattern)[0];
+            return res.status(400).json({
+                success: false,
+                msg: `Ya existe un producto con ese ${field}`,
                 error: {
-                    keyPattern: error.keyPattern,
-                    keyValue: error.keyValue,
-                    message: 'Duplicate key error'
+                    field,
+                    value: error.keyValue[field]
                 }
             });
         }
-        console.error(error);
-        if (error.code === 11000) {
-            res.status(400).send({
-                success: false,
-                msg: "Ya existe un producto con ese código o SKU"
-            });
-        } else {
-            res.status(500).send({
-                success: false,
-                msg: "Error al registrar el producto"
-            });
-        }
+        
+        // Error general
+        res.status(500).send({
+            success: false,
+            msg: "Error al registrar el producto",
+            error: error.message
+        });
     }
 };
 
