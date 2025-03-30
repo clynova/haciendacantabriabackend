@@ -2,8 +2,7 @@ import { Order } from '../models/Order.js';
 import { PaymentMethod } from '../models/PaymentMethod.js';
 import { validationResult } from 'express-validator';
 import * as webpayService from '../services/webpayService.js';
-import { OrderDetail } from '../models/OrderDetail.js';
-import { ProductoBase } from '../models/Product.js';
+import { enviarEmailConfirmacionOrden } from './emailController.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -235,6 +234,9 @@ export const processWebpayReturn = async (req, res) => {
             order.status = 'completed';
             await order.save();
 
+            // Enviar email de confirmación de orden
+            enviarEmailConfirmacionOrden(order._id);
+
             console.log('Pago completado exitosamente para la orden:', order._id);
             return res.redirect(`${process.env.FRONTEND_URL}/checkout/confirmation/success?order_id=${order._id}`);
         } else {
@@ -244,6 +246,9 @@ export const processWebpayReturn = async (req, res) => {
             // Mantener los valores de comisión existentes incluso si falla
             order.status = 'canceled';
             await order.save();
+
+            // Enviar email de confirmación de orden
+            enviarEmailConfirmacionOrden(order._id);
 
             console.log('Pago rechazado para la orden:', order._id);
             return res.redirect(`${process.env.FRONTEND_URL}/checkout/confirmation/failure?order_id=${order._id}`);

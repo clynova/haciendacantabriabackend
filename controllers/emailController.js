@@ -621,10 +621,528 @@ const enviarEmailRecuperacion = async (usuario) => {
   }
 };
 
+// Función para generar el HTML del email de confirmación de orden de compra
+const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario }) => {
+  const { firstName, lastName } = usuario;
+  const { _id, orderDate, status, subtotal, total, shippingAddress, shipping, payment, estimatedDeliveryDate } = order;
+  
+  // Formatear fecha de orden
+  const fechaOrden = new Date(orderDate).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  
+  // Formatear fecha estimada de entrega
+  const fechaEntrega = new Date(estimatedDeliveryDate).toLocaleDateString('es-ES', {
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric'
+  });
+  
+  // Formatear estado de la orden para mostrarlo en español
+  const estadosTraducidos = {
+    'pending': 'Pendiente',
+    'completed': 'Completada',
+    'canceled': 'Cancelada',
+    'finalized': 'Finalizada'
+  };
+  
+  const estadoOrden = estadosTraducidos[status] || status;
+  
+  // Crear HTML para cada producto
+  let productosHTML = '';
+  
+  for (const item of orderDetails) {
+    const producto = item.productId;
+    const cantidad = item.quantity;
+    const precio = item.price;
+    const total = (precio * cantidad).toFixed(2);
+    
+    // Obtener imagen del producto si está disponible
+    const imagenUrl = producto.multimedia?.imagenes?.find(img => img.esPrincipal)?.url || 
+                      producto.multimedia?.imagenes?.[0]?.url || 
+                      'https://via.placeholder.com/80x80?text=Producto';
+    
+    productosHTML += `
+      <tr>
+        <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
+          <img src="${imagenUrl}" alt="${producto.nombre}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
+          <div style="font-weight: bold;">${producto.nombre}</div>
+          <div style="color: #666; font-size: 14px; margin-top: 4px;">${producto.descripcion?.corta || ''}</div>
+        </td>
+        <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: center;">${cantidad}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: right;">$${precio.toFixed(2)}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: right;">$${total}</td>
+      </tr>
+    `;
+  }
+  
+  // URL para rastrear la orden
+  const orderUrl = `${process.env.FRONTEND_URL}/orders/${_id}`;
+  
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>Confirmación de tu pedido #${_id}</title>
+      <style>
+        /* Estilos base */
+        body {
+          font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+          margin: 0;
+          padding: 0;
+          background-color: #f7f7f7;
+          color: #333;
+          line-height: 1.6;
+        }
+        
+        /* Contenedor principal */
+        .container {
+          max-width: 650px;
+          margin: 0 auto;
+          background-color: #ffffff;
+          border-radius: 12px;
+          overflow: hidden;
+          box-shadow: 0 3px 10px rgba(0, 0, 0, 0.05);
+        }
+        
+        /* Cabecera */
+        .header {
+          background-color: #2C3E50;
+          color: white;
+          padding: 30px 20px;
+          text-align: center;
+        }
+        
+        .header-text {
+          font-size: 28px;
+          font-weight: 700;
+          margin: 0;
+          letter-spacing: 0.2px;
+        }
+        
+        .subheader {
+          margin-top: 5px;
+          font-size: 16px;
+          opacity: 0.9;
+        }
+        
+        /* Contenido */
+        .content {
+          padding: 30px 25px;
+        }
+        
+        .greeting {
+          font-size: 18px;
+          margin-bottom: 25px;
+        }
+        
+        /* Secciones */
+        .section {
+          margin-bottom: 30px;
+        }
+        
+        .section-title {
+          font-size: 18px;
+          font-weight: 600;
+          border-bottom: 1px solid #eaeaea;
+          padding-bottom: 10px;
+          margin-bottom: 15px;
+        }
+        
+        /* Información de la orden */
+        .order-info {
+          background-color: #f9f9f9;
+          border-radius: 8px;
+          padding: 15px;
+          margin-bottom: 25px;
+        }
+        
+        .order-info-item {
+          margin-bottom: 10px;
+          display: flex;
+          flex-wrap: wrap;
+        }
+        
+        .order-info-label {
+          font-weight: 600;
+          width: 180px;
+          margin-right: 10px;
+        }
+        
+        .order-info-value {
+          flex: 1;
+        }
+        
+        /* Tabla de productos */
+        .products-table {
+          width: 100%;
+          border-collapse: collapse;
+          margin-bottom: 20px;
+        }
+        
+        .products-table th {
+          background-color: #f5f5f5;
+          padding: 12px 10px;
+          text-align: left;
+          font-weight: 600;
+        }
+        
+        /* Resumen */
+        .summary {
+          margin-top: 20px;
+        }
+        
+        .summary-row {
+          display: flex;
+          justify-content: space-between;
+          padding: 5px 15px;
+        }
+        
+        .summary-row.total {
+          font-weight: 700;
+          font-size: 18px;
+          background-color: #f9f9f9;
+          padding: 12px 15px;
+          margin-top: 8px;
+          border-radius: 6px;
+        }
+        
+        /* Dirección de envío */
+        .shipping-address {
+          background-color: #f9f9f9;
+          padding: 15px;
+          border-radius: 8px;
+        }
+        
+        /* Estado */
+        .status-badge {
+          display: inline-block;
+          padding: 6px 12px;
+          border-radius: 20px;
+          font-weight: 600;
+          font-size: 14px;
+        }
+        
+        .status-pending {
+          background-color: #ffe0b2;
+          color: #e65100;
+        }
+        
+        .status-completed {
+          background-color: #c8e6c9;
+          color: #2e7d32;
+        }
+        
+        .status-canceled {
+          background-color: #ffcdd2;
+          color: #c62828;
+        }
+        
+        .status-finalized {
+          background-color: #bbdefb;
+          color: #0d47a1;
+        }
+        
+        /* Botones */
+        .button-container {
+          text-align: center;
+          margin: 30px 0 20px;
+        }
+        
+        .button {
+          display: inline-block;
+          background-color: #3498db;
+          color: white;
+          font-weight: bold;
+          text-decoration: none;
+          padding: 12px 30px;
+          border-radius: 6px;
+          font-size: 16px;
+          transition: all 0.3s ease;
+        }
+        
+        .button:hover {
+          background-color: #2980b9;
+        }
+        
+        /* Footer */
+        .footer {
+          background-color: #f5f5f5;
+          padding: 20px;
+          text-align: center;
+          color: #666;
+          font-size: 14px;
+        }
+        
+        /* Responsive */
+        @media only screen and (max-width: 480px) {
+          .container {
+            width: 100%;
+            border-radius: 0;
+          }
+          
+          .content {
+            padding: 20px 15px;
+          }
+          
+          .order-info-label {
+            width: 100%;
+            margin-bottom: 5px;
+          }
+          
+          .products-table {
+            font-size: 14px;
+          }
+          
+          .button {
+            width: 100%;
+            box-sizing: border-box;
+          }
+        }
+      </style>
+    </head>
+    <body>
+      <div class="container">
+        <div class="header">
+          <h1 class="header-text">¡Tu pedido está confirmado!</h1>
+          <p class="subheader">Pedido #${_id.toString().substring(0, 8).toUpperCase()}</p>
+        </div>
+        
+        <div class="content">
+          <p class="greeting">Hola ${firstName} ${lastName},</p>
+          
+          <p>¡Gracias por tu compra en Hacienda Cantabria! Hemos recibido tu pedido y lo estamos procesando.</p>
+          
+          <div class="section">
+            <h2 class="section-title">Detalles del pedido</h2>
+            
+            <div class="order-info">
+              <div class="order-info-item">
+                <div class="order-info-label">Número de pedido:</div>
+                <div class="order-info-value">#${_id.toString().substring(0, 8).toUpperCase()}</div>
+              </div>
+              <div class="order-info-item">
+                <div class="order-info-label">Fecha de compra:</div>
+                <div class="order-info-value">${fechaOrden}</div>
+              </div>
+              <div class="order-info-item">
+                <div class="order-info-label">Método de pago:</div>
+                <div class="order-info-value">${payment.provider || 'No especificado'}</div>
+              </div>
+              <div class="order-info-item">
+                <div class="order-info-label">Estado:</div>
+                <div class="order-info-value">
+                  <span class="status-badge status-${status}">${estadoOrden}</span>
+                </div>
+              </div>
+              <div class="order-info-item">
+                <div class="order-info-label">Entrega estimada:</div>
+                <div class="order-info-value">${fechaEntrega}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2 class="section-title">Productos comprados</h2>
+            
+            <table class="products-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px;"></th>
+                  <th>Producto</th>
+                  <th style="text-align: center;">Cant.</th>
+                  <th style="text-align: right;">Precio</th>
+                  <th style="text-align: right;">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${productosHTML}
+              </tbody>
+            </table>
+            
+            <div class="summary">
+              <div class="summary-row">
+                <div>Subtotal:</div>
+                <div>$${subtotal.toFixed(2)}</div>
+              </div>
+              <div class="summary-row">
+                <div>Envío:</div>
+                <div>$${shipping.cost.toFixed(2)}</div>
+              </div>
+              <div class="summary-row total">
+                <div>Total:</div>
+                <div>$${total.toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="section">
+            <h2 class="section-title">Dirección de entrega</h2>
+            
+            <div class="shipping-address">
+              <div><strong>${shippingAddress.recipientName}</strong></div>
+              <div>${shippingAddress.street}</div>
+              <div>${shippingAddress.city}, ${shippingAddress.state} ${shippingAddress.zipCode}</div>
+              <div>${shippingAddress.country}</div>
+              ${shippingAddress.phoneContact ? `<div>Teléfono: ${shippingAddress.phoneContact}</div>` : ''}
+              ${shippingAddress.additionalInstructions ? `<div><strong>Instrucciones adicionales:</strong> ${shippingAddress.additionalInstructions}</div>` : ''}
+            </div>
+          </div>
+          
+          <div class="button-container">
+            <a class="button" href="${orderUrl}">Ver detalles del pedido</a>
+          </div>
+          
+          <p>Si tienes alguna pregunta sobre tu pedido, no dudes en contactarnos respondiendo a este email o a través de nuestro formulario de contacto.</p>
+        </div>
+        
+        <div class="footer">
+          <p>Gracias por comprar en Hacienda Cantabria</p>
+          <p>© ${new Date().getFullYear()} Hacienda Cantabria. Todos los derechos reservados.</p>
+        </div>
+      </div>
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * Envía un email de confirmación de compra al usuario
+ * @param {string|object} orderIdOrReq - ID de la orden o objeto Request de Express
+ * @param {object} [res] - Objeto Response de Express (opcional)
+ * @returns {Promise<Object>} - Resultado del envío del email
+ */
+const enviarEmailConfirmacionOrden = async (orderIdOrReq, res = null) => {
+  try {
+    // Determinar si es una llamada HTTP o una llamada directa
+    const orderId = typeof orderIdOrReq === 'string' ? orderIdOrReq : orderIdOrReq.params.orderId;
+
+    if (!orderId) {
+      const error = new Error('ID de orden no proporcionado');
+      if (res) {
+        return res.status(400).json({
+          success: false,
+          error: error.message
+        });
+      }
+      throw error;
+    }
+
+    // Importar los modelos necesarios
+    const { Order } = await import('../models/Order.js');
+    const { OrderDetail } = await import('../models/OrderDetail.js');
+    const { User } = await import('../models/User.js');
+
+    // Obtener la orden
+    const order = await Order.findById(orderId)
+      .populate('shipping.carrier');
+    
+    if (!order) {
+      const error = new Error(`Orden con ID ${orderId} no encontrada`);
+      if (res) {
+        return res.status(404).json({
+          success: false,
+          error: error.message
+        });
+      }
+      throw error;
+    }
+
+    // Obtener los detalles de la orden (productos)
+    const orderDetails = await OrderDetail.find({ orderId })
+      .populate({
+        path: 'productId',
+        model: 'Producto'
+      });
+
+    // Obtener la información del usuario
+    const usuario = await User.findById(order.userId);
+    if (!usuario) {
+      const error = new Error(`Usuario con ID ${order.userId} no encontrado`);
+      if (res) {
+        return res.status(404).json({
+          success: false,
+          error: error.message
+        });
+      }
+      throw error;
+    }
+
+    // Si es una solicitud HTTP, verificar que el usuario tenga permiso
+    if (res && orderIdOrReq.user && orderIdOrReq.user._id.toString() !== usuario._id.toString() && !orderIdOrReq.user.roles.includes('admin')) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para acceder a esta orden'
+      });
+    }
+
+    // Configurar el transportador de email
+    const transporter = createTransporter();
+
+    // Generar el contenido del email
+    const htmlContent = await generarEmailConfirmacionOrdenHTML({
+      order,
+      orderDetails,
+      usuario
+    });
+
+    // Configurar opciones del email
+    const mailOptions = {
+      from: `"Hacienda Cantabria" <${process.env.EMAIL_FROM}>`,
+      to: usuario.email,
+      subject: `Confirmación de tu pedido #${order._id.toString().substring(0, 8).toUpperCase()}`,
+      html: htmlContent
+    };
+
+    // Enviar el email
+    const info = await transporter.sendMail(mailOptions);
+    
+    const result = {
+      success: true,
+      messageId: info.messageId,
+      orderId,
+      email: usuario.email
+    };
+
+    // Si es una solicitud HTTP, enviar respuesta
+    if (res) {
+      return res.status(200).json({
+        ...result,
+        msg: 'Email de confirmación enviado exitosamente'
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error en enviarEmailConfirmacionOrden:', error);
+    
+    // Si es una solicitud HTTP, enviar respuesta de error
+    if (res) {
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    return {
+      success: false,
+      error: error.message,
+      orderId: typeof orderIdOrReq === 'string' ? orderIdOrReq : orderIdOrReq.params?.orderId
+    };
+  }
+};
+
 // Exportar las funciones de email
 export {
   enviarEmailConfirmacion,
   enviarEmailRecuperacion,
   generarEmailProductoFavoritoHTML,
-  enviarEmailProductoFavorito
+  enviarEmailProductoFavorito,
+  enviarEmailConfirmacionOrden
 };
