@@ -1,6 +1,7 @@
 import { ProductoBase } from '../models/Product.js';
 import { Order } from '../models/Order.js';
 import { User } from '../models/User.js';
+import { Quotation } from '../models/Quotation.js';
 
 const getDashboardStats = async (req, res) => {
     try {
@@ -95,9 +96,9 @@ const getTopTags = async (req, res) => {
  */
 const getTotalSales = async (req, res) => {
     try {
-        // Obtener todas las órdenes completadas
+        // Obtener todas las órdenes completadas o finalizadas
         const completedOrders = await Order.find({ 
-            status: 'completed',
+            status: { $in: ['completed', 'finalized'] },
             'payment.status': 'completed' 
         });
         
@@ -169,4 +170,110 @@ const getTotalSales = async (req, res) => {
     }
 };
 
-export { getDashboardStats, getTopTags, getTotalSales };
+const getQuotationStats = async (req, res) => {
+    try {
+        // Obtener el conteo de cotizaciones por cada status
+        const stats = await Quotation.aggregate([
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                    total: { $sum: "$total" }
+                }
+            }
+        ]);
+
+        // Crear un objeto con los conteos inicializados en 0
+        const quotationStats = {
+            pending: { count: 0, total: 0 },
+            completed: { count: 0, total: 0 },
+            canceled: { count: 0, total: 0 },
+            finalized: { count: 0, total: 0 }
+        };
+
+        // Llenar los datos reales
+        stats.forEach(stat => {
+            if (quotationStats.hasOwnProperty(stat._id)) {
+                quotationStats[stat._id] = {
+                    count: stat.count,
+                    total: stat.total
+                };
+            }
+        });
+
+        // Calcular totales generales
+        const totalQuotations = Object.values(quotationStats).reduce((sum, stat) => sum + stat.count, 0);
+        const totalAmount = Object.values(quotationStats).reduce((sum, stat) => sum + stat.total, 0);
+
+        res.status(200).send({
+            success: true,
+            msg: 'Estadísticas de cotizaciones',
+            data: {
+                byStatus: quotationStats,
+                totalQuotations,
+                totalAmount
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener las estadísticas de cotizaciones',
+            error: error.message
+        });
+    }
+};
+
+const getOrderStats = async (req, res) => {
+    try {
+        // Obtener el conteo de órdenes por cada status
+        const stats = await Order.aggregate([
+            {
+                $group: {
+                    _id: "$status",
+                    count: { $sum: 1 },
+                    total: { $sum: "$total" }
+                }
+            }
+        ]);
+
+        // Crear un objeto con los conteos inicializados en 0
+        const orderStats = {
+            pending: { count: 0, total: 0 },
+            completed: { count: 0, total: 0 },
+            canceled: { count: 0, total: 0 },
+            finalized: { count: 0, total: 0 }
+        };
+
+        // Llenar los datos reales
+        stats.forEach(stat => {
+            if (orderStats.hasOwnProperty(stat._id)) {
+                orderStats[stat._id] = {
+                    count: stat.count,
+                    total: stat.total
+                };
+            }
+        });
+
+        // Calcular totales generales
+        const totalOrders = Object.values(orderStats).reduce((sum, stat) => sum + stat.count, 0);
+        const totalAmount = Object.values(orderStats).reduce((sum, stat) => sum + stat.total, 0);
+
+        res.status(200).send({
+            success: true,
+            msg: 'Estadísticas de órdenes',
+            data: {
+                byStatus: orderStats,
+                totalOrders,
+                totalAmount
+            }
+        });
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            message: 'Error al obtener las estadísticas de órdenes',
+            error: error.message
+        });
+    }
+};
+
+export { getDashboardStats, getTopTags, getTotalSales, getQuotationStats, getOrderStats };
