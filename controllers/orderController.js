@@ -8,6 +8,7 @@ import { ShippingMethod } from "../models/ShippingMethod.js";
 import { PaymentMethod } from '../models/PaymentMethod.js';
 import { Quotation } from '../models/Quotation.js';
 import { QuotationDetail } from '../models/QuotationDetail.js';
+import { enviarEmailConfirmacionOrden } from './emailController.js';
 
 const createOrder = async (req, res) => {
     try {
@@ -234,6 +235,7 @@ const createOrder = async (req, res) => {
                 total                 // Total final
             }
         });
+
     } catch (err) {
         console.error("Error al crear la orden:", err);
         
@@ -621,6 +623,9 @@ const createOrderFromQuotation = async (req, res) => {
                 total
             }
         });
+        
+        // Enviar email de confirmación de orden
+        enviarEmailConfirmacionOrden(order._id);
 
     } catch (err) {
         console.error("Error al crear la orden desde la cotización:", err);
