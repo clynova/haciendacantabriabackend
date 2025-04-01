@@ -44,7 +44,7 @@ const createTransporter = () => {
 
 // Función para generar el HTML del email de confirmación de cuenta
 const generarEmailConfirmacionHTML = ({ firstName, token, email }) => {
-  const confirmationUrl = `${process.env.FRONTEND_URL}auth/verification-pending?email=${email}&token=${token}`;
+  const confirmationUrl = `${process.env.FRONTEND_URL}/auth/verification-pending?email=${email}&token=${token}`;
 
   return `
     <!DOCTYPE html>
@@ -152,7 +152,7 @@ const generarEmailConfirmacionHTML = ({ firstName, token, email }) => {
 
 // Función para generar el HTML del email de recuperación de contraseña
 const generarEmailRecuperacionHTML = ({ firstName, token }) => {
-  const resetUrl = `${process.env.FRONTEND_URL}/restablecer/${token}`;
+  const resetUrl = `${process.env.FRONTEND_URL}/auth/restablecer/${token}`;
 
   return `
     <!DOCTYPE html>
@@ -274,7 +274,7 @@ const generarEmailProductoFavoritoHTML = ({ usuario, producto }) => {
   const precioFinal = precioBase * (1 - (descuento / 100));
   
   // Crear URL del producto
-  const productoUrl = `${process.env.FRONTEND_URL}product/${slug}`;
+  const productoUrl = `${process.env.FRONTEND_URL}/product/${slug}`;
   
   // Texto descriptivo (limitado a 2 líneas aproximadamente)
   const descripcionCorta = descripcion?.corta || 
