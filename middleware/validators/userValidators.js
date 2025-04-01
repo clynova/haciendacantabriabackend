@@ -1,5 +1,4 @@
-import { body } from 'express-validator';
-import { check } from 'express-validator';
+import { check, body } from 'express-validator';
 
 const validateUserRegistration = [
     body('firstName')
@@ -47,12 +46,25 @@ const validarAutenticar = [
 ];
 
 const validarNuevaPassword = [
-    body('password')
-        .notEmpty().withMessage('La contraseña es requerida')
-        .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
-        .matches(/[A-Z]/).withMessage('La contraseña debe incluir al menos una letra mayúscula')
-        .matches(/\d/).withMessage('La contraseña debe incluir al menos un número')
-        .matches(/[!@#$%^&*(),.?":{}|<>]/).withMessage('La contraseña debe incluir al menos un carácter especial (!@#$%^&*)'),
+    check('email')
+        .isEmail()
+        .withMessage('El email no es válido'),
+    check('token')
+        .not()
+        .isEmpty()
+        .withMessage('El token es requerido'),
+    check('password')
+        .isLength({ min: 6 })
+        .withMessage('La contraseña debe tener al menos 6 caracteres')
+        .matches(/\d/)
+        .withMessage('La contraseña debe contener al menos un número'),
+    check('confirmPassword')
+        .custom((value, { req }) => {
+            if (value !== req.body.password) {
+                throw new Error('Las contraseñas no coinciden');
+            }
+            return true;
+        })
 ];
 
 const validarCambiarPassword = [

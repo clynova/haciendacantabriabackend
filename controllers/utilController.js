@@ -98,7 +98,7 @@ const getTotalSales = async (req, res) => {
     try {
         // Obtener todas las órdenes completadas o finalizadas
         const completedOrders = await Order.find({ 
-            status: { $in: ['completed', 'finalized'] },
+            status: { $in: ['finalized'] },
             'payment.status': 'completed' 
         });
         

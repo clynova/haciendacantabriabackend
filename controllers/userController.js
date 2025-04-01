@@ -174,40 +174,43 @@ const resetPassword = async (req, res) => {
     res.status(201).send({ success: true, msg: 'Se envió un mensaje con las instrucciones para restablecer tu contraseña' });
 };
 
-const comprobarToken = async (req, res) => {
-    const usuarioExistente = await User.findOne({ token: req.params.token });
-    if (!usuarioExistente) {
-        return res.status(400).send({ msg: "El token no es valido" });
-    }
-    res.status(200).send({ success: true, msg: 'Se valido el token, crea la nueva password' });
-};
-
-
-
-
-const nuevoPassword = async (req, res) => {
+const validarTokenEmail = async (req, res) => {
     try {
-        const errors = validationResult(req);
-        if (!errors.isEmpty()) {
-            return res.status(400).send({ success: false, msg: "Errores de validación", errors: errors.array() });
+        const { email, token } = req.body;
+
+        // Validar que se reciban ambos campos
+        if (!email || !token) {
+            return res.status(400).send({ 
+                success: false, 
+                msg: "Se requiere email y token para la validación" 
+            });
         }
 
-        const { password } = req.body;
-        const usuarioExistente = await User.findOne({ token: req.params.token });
-
-        if (!usuarioExistente) {
-            return res.status(400).send({ success: false, msg: "El token no es válido" });
+        // Buscar usuario por email y token
+        const usuario = await User.findOne({ email, token });
+        if (!usuario) {
+            return res.status(400).send({ 
+                success: false, 
+                msg: "Token inválido" 
+            });
         }
 
-        usuarioExistente.token = null;
-        usuarioExistente.password = password;
-        await usuarioExistente.save();
-
-        res.status(200).send({ success: true, msg: "Contraseña actualizada correctamente" });
+        // Si el token es válido, devolver éxito
+        res.status(200).send({ 
+            success: true, 
+            msg: "Token válido",
+            data: { email }
+        });
     } catch (err) {
-        res.status(500).send({ success: false, msg: "Hubo un error al actualizar la contraseña" });
+        console.error("Error en validación de token:", err);
+        res.status(500).send({ 
+            success: false, 
+            msg: "Error al validar el token" 
+        });
     }
 };
+
+
 
 const updateProfile = async (req, res) => {
 
@@ -550,13 +553,70 @@ const getAddresses = async (req, res) => {
     }
 };
 
+const nuevoPassword = async (req, res) => {
+    try {
+        //console.log(res)
+
+        const errors = validationResult(req);
+        if (!errors.isEmpty()) {
+            return res.status(400).send({ success: false, msg: "Errores de validación", errors: errors.array() });
+        }
+
+        const { email, token, password, confirmPassword } = req.body;
+
+        console.log(email, token, password, confirmPassword)
+        
+        // Validar que las contraseñas coincidan
+        if (password !== confirmPassword) {
+            return res.status(400).send({
+                success: false,
+                msg: "Las contraseñas no coinciden"
+            });
+        }
+
+        // Buscar usuario que coincida con el email y token
+        const usuario = await User.findOne({
+            email,
+            token,
+            confirmado: true // Asegurarse que el usuario esté confirmado
+        });
+
+        if (!usuario) {
+            return res.status(404).send({
+                success: false,
+                msg: "Token no válido o usuario no encontrado"
+            });
+        }
+
+        // Validar que el token no haya expirado (opcional, si manejas expiración)
+        // Aquí puedes agregar la lógica de expiración si lo necesitas
+
+        // Actualizar la contraseña y limpiar el token
+        usuario.password = password; // El modelo User debe encriptar la contraseña en el pre-save
+        usuario.token = null; // Limpiar el token para que no pueda ser usado nuevamente
+        
+        await usuario.save();
+
+        res.status(200).send({
+            success: true,
+            msg: "Contraseña actualizada correctamente"
+        });
+
+    } catch (error) {
+        console.error("Error al actualizar contraseña:", error);
+        res.status(500).send({
+            success: false,
+            msg: "Error al actualizar la contraseña"
+        });
+    }
+};
+
 export {
     registrar,
     confirmar,
     autenticar,
     resetPassword,
-    comprobarToken,
-    nuevoPassword,
+    validarTokenEmail,
     updateProfile,
     changePassword,
     deleteAccount,
@@ -568,5 +628,6 @@ export {
     updateAddress,
     deleteAddress,
     setActiveAddress,
-    getAddresses
+    getAddresses,
+    nuevoPassword
 };
