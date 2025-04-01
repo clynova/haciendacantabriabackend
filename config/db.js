@@ -12,8 +12,8 @@ const conectarDB = async () => {
     }
 
     try {
-        const uri = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@botdiscord.hj39v.mongodb.net/${DB_NAME}?retryWrites=true&w=majority`;
-        //const uri =  `mongodb+srv://${DB_USER}:${DB_PASSWORD}@haciendacantabria.t1eoa.mongodb.net/${DB_NAME}?retryWrites=true&w=majority`
+        //const uri = `mongodb+srv://${DB_USER}:${DB_PASSWORD}@botdiscord.hj39v.mongodb.net/${DB_NAME}?retryWrites=true&w=majority`;
+        const uri =  `mongodb+srv://${DB_USER}:${DB_PASSWORD}@haciendacantabria.t1eoa.mongodb.net/${DB_NAME}?retryWrites=true&w=majority`
         const db = await mongoose.connect(uri);
 
         console.log(`Mongo conectado en ${db.connection.host}`);
