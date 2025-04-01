@@ -43,7 +43,9 @@ app.use(cors({
       'https://haciendacantabria.com',
       'https://www.haciendacantabria.com',
       'https://prhaciendacantabria.vercel.app/',
-      'https://prhaciendacantabria.vercel.app']
+      'https://prhaciendacantabria.vercel.app',
+      'https://shop.cohesaspa.com/',
+      'https://shop.cohesaspa.com']
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
