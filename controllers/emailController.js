@@ -681,7 +681,7 @@ const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario 
   }
   
   // URL para rastrear la orden
-  const orderUrl = `${process.env.FRONTEND_URL}/orders/${_id}`;
+  const orderUrl = `${process.env.FRONTEND_URL}/profile/orders/${_id}`;
   
   return `
     <!DOCTYPE html>
