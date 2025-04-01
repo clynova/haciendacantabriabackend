@@ -98,9 +98,6 @@ export const initiatePayment = async (req, res) => {
         // Iniciar el proceso según el tipo de pago
         let paymentResponse;
 
-
-        console.log(order);
-
         if (paymentMethod.type === 'webpay') {
             try {
                 // Iniciar transacción con WebPay
@@ -143,6 +140,7 @@ export const initiatePayment = async (req, res) => {
                 // Actualizar orden con detalles iniciales de pago
                 order.payment.provider = 'webpay';
                 order.payment.status = 'processing';
+                order.payment.token = paymentResponse.token,
                 await order.save();
 
                 return res.json({
