@@ -156,7 +156,7 @@ const resetPassword = async (req, res) => {
         return res.status(400).send({ success: false, msg: "No se encontro usuario con este email" });
     }
 
-    usuarioExistente.token = generarId();
+    usuarioExistente.token = generarCodigo();
     await usuarioExistente.save();
 
     // Enviar email de recuperación

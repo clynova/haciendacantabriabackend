@@ -28,6 +28,7 @@ const orderSchema = new mongoose.Schema(
                 enum: ['pending', 'processing', 'completed', 'failed', 'refunded'],
                 default: 'pending'
             },
+            token: { type: String },
             transactionId: { type: String },
             provider: { type: String },
             amount: { type: Number },
