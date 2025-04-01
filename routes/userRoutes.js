@@ -4,7 +4,7 @@ import {
     confirmar,
     autenticar,
     resetPassword,
-    comprobarToken,
+    validarTokenEmail,
     nuevoPassword,
     updateProfile,
     changePassword,
@@ -26,7 +26,7 @@ import {
     validarCambiarPassword,
     addressValidationRules
 } from '../middleware/validators/userValidators.js';
-import { checkAuth, checkTokenBlacklist, checkRole, checkOwnerOrAdmin, validateToken } from '../middleware/authMiddleware.js';
+import { checkAuth, checkTokenBlacklist, checkRole, validateToken } from '../middleware/authMiddleware.js';
 
 const userRoutes = express.Router();
 
@@ -39,8 +39,9 @@ userRoutes.get('/validate-token', validateToken); // Validar token
 
 // Rutas para restablecer contraseña
 userRoutes.post('/reset-password', resetPassword); // Solicitar restablecimiento de contraseña
-userRoutes.get('/reset-password/:token', comprobarToken); // Verificar token de restablecimiento
-userRoutes.post('/reset-password/:token', validarNuevaPassword, nuevoPassword); // Establecer nueva contraseña
+userRoutes.post('/reset-password/validar-token', validarTokenEmail);
+userRoutes.post('/reset-password/validar-nuevoPass', validarNuevaPassword, nuevoPassword); // Establecer nueva contraseña
+
 
 // Rutas protegidas (requieren autenticación y validación de token)
 userRoutes.use(checkAuth, checkTokenBlacklist); // Middleware aplicado a todas las rutas siguientes
