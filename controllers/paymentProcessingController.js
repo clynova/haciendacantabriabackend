@@ -2,7 +2,7 @@ import { Order } from '../models/Order.js';
 import { PaymentMethod } from '../models/PaymentMethod.js';
 import { validationResult } from 'express-validator';
 import * as webpayService from '../services/webpayService.js';
-import { enviarEmailConfirmacionOrden } from './emailController.js';
+import { enviarEmailConfirmacionOrdenDirecta } from './emailController.js';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -233,7 +233,7 @@ export const processWebpayReturn = async (req, res) => {
             await order.save();
 
             // Enviar email de confirmación de orden
-            enviarEmailConfirmacionOrden(order._id);
+            enviarEmailConfirmacionOrdenDirecta(order._id);
 
             console.log('Pago completado exitosamente para la orden:', order._id);
             return res.redirect(`${process.env.FRONTEND_URL}/checkout/confirmation/success?order_id=${order._id}`);
@@ -246,7 +246,7 @@ export const processWebpayReturn = async (req, res) => {
             await order.save();
 
             // Enviar email de confirmación de orden
-            enviarEmailConfirmacionOrden(order._id);
+            enviarEmailConfirmacionOrdenDirecta(order._id);
 
             console.log('Pago rechazado para la orden:', order._id);
             return res.redirect(`${process.env.FRONTEND_URL}/checkout/confirmation/failure?order_id=${order._id}`);

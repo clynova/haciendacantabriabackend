@@ -262,22 +262,22 @@ const generarEmailRecuperacionHTML = ({ firstName, token }) => {
 const generarEmailProductoFavoritoHTML = ({ usuario, producto }) => {
   const { firstName } = usuario;
   const { nombre, descripcion, precios, multimedia, slug } = producto;
-  
+
   // Obtener la imagen principal del producto o la primera disponible
-  const imagen = multimedia?.imagenes?.find(img => img.esPrincipal)?.url || 
-                 multimedia?.imagenes?.[0]?.url || 
-                 'https://via.placeholder.com/400x300?text=Producto';
-  
+  const imagen = multimedia?.imagenes?.find(img => img.esPrincipal)?.url ||
+    multimedia?.imagenes?.[0]?.url ||
+    'https://via.placeholder.com/400x300?text=Producto';
+
   // Calcular el precio con descuentos
   const precioBase = precios?.base || 0;
   const descuento = precios?.descuentos?.regular || 0;
   const precioFinal = precioBase * (1 - (descuento / 100));
-  
+
   // Crear URL del producto
   const productoUrl = `${process.env.FRONTEND_URL}/product/${slug}`;
-  
+
   // Texto descriptivo (limitado a 2 líneas aproximadamente)
-  const descripcionCorta = descripcion?.corta || 
+  const descripcionCorta = descripcion?.corta ||
     (descripcion?.completa ? descripcion.completa.substring(0, 120) + '...' : 'Descubre este increíble producto');
 
   return `
@@ -477,15 +477,15 @@ const enviarEmailProductoFavorito = async (productoId) => {
     }
 
     // Encontrar todas las listas de deseos que incluyen este producto
-    const wishlists = await Wishlist.find({ 
-      products: { $in: [productoId] } 
+    const wishlists = await Wishlist.find({
+      products: { $in: [productoId] }
     }).populate('userId');
 
     if (!wishlists || wishlists.length === 0) {
-      return { 
-        success: true, 
-        enviados: 0, 
-        mensaje: 'No hay usuarios con este producto en su lista de favoritos' 
+      return {
+        success: true,
+        enviados: 0,
+        mensaje: 'No hay usuarios con este producto en su lista de favoritos'
       };
     }
 
@@ -558,7 +558,7 @@ const enviarEmailConfirmacion = async (usuario) => {
   try {
     const { firstName, email, token } = usuario;
     console.log('Iniciando envío de email de confirmación a:', email);
-    
+
     const transporter = createTransporter();
     console.log('Transporter creado');
 
@@ -625,21 +625,21 @@ const enviarEmailRecuperacion = async (usuario) => {
 const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario }) => {
   const { firstName, lastName } = usuario;
   const { _id, orderDate, status, subtotal, total, shippingAddress, shipping, payment, estimatedDeliveryDate } = order;
-  
+
   // Formatear fecha de orden
   const fechaOrden = new Date(orderDate).toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   });
-  
+
   // Formatear fecha estimada de entrega
   const fechaEntrega = new Date(estimatedDeliveryDate).toLocaleDateString('es-ES', {
     day: 'numeric',
     month: 'long',
     year: 'numeric'
   });
-  
+
   // Formatear estado de la orden para mostrarlo en español
   const estadosTraducidos = {
     'pending': 'Pendiente',
@@ -647,23 +647,23 @@ const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario 
     'canceled': 'Cancelada',
     'finalized': 'Finalizada'
   };
-  
+
   const estadoOrden = estadosTraducidos[status] || status;
-  
+
   // Crear HTML para cada producto
   let productosHTML = '';
-  
+
   for (const item of orderDetails) {
     const producto = item.productId;
     const cantidad = item.quantity;
     const precio = item.price;
     const total = (precio * cantidad).toFixed(2);
-    
+
     // Obtener imagen del producto si está disponible
-    const imagenUrl = producto.multimedia?.imagenes?.find(img => img.esPrincipal)?.url || 
-                      producto.multimedia?.imagenes?.[0]?.url || 
-                      'https://via.placeholder.com/80x80?text=Producto';
-    
+    const imagenUrl = producto.multimedia?.imagenes?.find(img => img.esPrincipal)?.url ||
+      producto.multimedia?.imagenes?.[0]?.url ||
+      'https://via.placeholder.com/80x80?text=Producto';
+
     productosHTML += `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
@@ -679,10 +679,10 @@ const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario 
       </tr>
     `;
   }
-  
+
   // URL para rastrear la orden
   const orderUrl = `${process.env.FRONTEND_URL}/profile/orders/${_id}`;
-  
+
   return `
     <!DOCTYPE html>
     <html>
@@ -1042,7 +1042,7 @@ const enviarEmailConfirmacionOrden = async (orderIdOrReq, res = null) => {
     // Obtener la orden
     const order = await Order.findById(orderId)
       .populate('shipping.carrier');
-    
+
     if (!order) {
       const error = new Error(`Orden con ID ${orderId} no encontrada`);
       if (res) {
@@ -1102,7 +1102,7 @@ const enviarEmailConfirmacionOrden = async (orderIdOrReq, res = null) => {
 
     // Enviar el email
     const info = await transporter.sendMail(mailOptions);
-    
+
     const result = {
       success: true,
       messageId: info.messageId,
@@ -1121,7 +1121,132 @@ const enviarEmailConfirmacionOrden = async (orderIdOrReq, res = null) => {
     return result;
   } catch (error) {
     console.error('Error en enviarEmailConfirmacionOrden:', error);
-    
+
+    // Si es una solicitud HTTP, enviar respuesta de error
+    if (res) {
+      return res.status(500).json({
+        success: false,
+        error: error.message
+      });
+    }
+
+    return {
+      success: false,
+      error: error.message,
+      orderId: typeof orderIdOrReq === 'string' ? orderIdOrReq : orderIdOrReq.params?.orderId
+    };
+  }
+};
+
+
+/**
+ * Envía un email de confirmación de compra al usuario
+ * @param {string|object} orderIdOrReq - ID de la orden o objeto Request de Express
+ * @param {object} [res] - Objeto Response de Express (opcional)
+ * @returns {Promise<Object>} - Resultado del envío del email
+ */
+const enviarEmailConfirmacionOrdenDirecta = async (orderId, res = null) => {
+  try {
+
+    if (!orderId) {
+      const error = new Error('ID de orden no proporcionado');
+      if (res) {
+        return res.status(400).json({
+          success: false,
+          error: error.message
+        });
+      }
+      throw error;
+    }
+
+    // Importar los modelos necesarios
+    const { Order } = await import('../models/Order.js');
+    const { OrderDetail } = await import('../models/OrderDetail.js');
+    const { User } = await import('../models/User.js');
+
+    // Obtener la orden
+    const order = await Order.findById(orderId)
+      .populate('shipping.carrier');
+
+    if (!order) {
+      const error = new Error(`Orden con ID ${orderId} no encontrada`);
+      if (res) {
+        return res.status(404).json({
+          success: false,
+          error: error.message
+        });
+      }
+      throw error;
+    }
+
+    // Obtener los detalles de la orden (productos)
+    const orderDetails = await OrderDetail.find({ orderId })
+      .populate({
+        path: 'productId',
+        model: 'Producto'
+      });
+
+    // Obtener la información del usuario
+    const usuario = await User.findById(order.userId);
+    if (!usuario) {
+      const error = new Error(`Usuario con ID ${order.userId} no encontrado`);
+      if (res) {
+        return res.status(404).json({
+          success: false,
+          error: error.message
+        });
+      }
+      throw error;
+    }
+
+    // Si es una solicitud HTTP, verificar que el usuario tenga permiso
+    if (res && orderIdOrReq.user && orderIdOrReq.user._id.toString() !== usuario._id.toString() && !orderIdOrReq.user.roles.includes('admin')) {
+      return res.status(403).json({
+        success: false,
+        error: 'No tienes permiso para acceder a esta orden'
+      });
+    }
+
+    // Configurar el transportador de email
+    const transporter = createTransporter();
+
+    // Generar el contenido del email
+    const htmlContent = await generarEmailConfirmacionOrdenHTML({
+      order,
+      orderDetails,
+      usuario
+    });
+
+    // Configurar opciones del email
+    const mailOptions = {
+      from: `"Hacienda Cantabria" <${process.env.EMAIL_FROM}>`,
+      to: usuario.email,
+      subject: `Confirmación de tu pedido #${order._id.toString().substring(0, 8).toUpperCase()}`,
+      html: htmlContent
+    };
+
+    // Enviar el email
+    const info = await transporter.sendMail(mailOptions);
+
+    const result = {
+      success: true,
+      messageId: info.messageId,
+      orderId,
+      email: usuario.email
+    };
+
+    // Si es una solicitud HTTP, enviar respuesta
+    if (res) {
+      return res.status(200).json({
+        ...result,
+        msg: 'Email de confirmación enviado exitosamente'
+      });
+    }
+
+    return result;
+  } catch (error) {
+    console.error('Error en enviarEmailConfirmacionOrden:', error);
+
     // Si es una solicitud HTTP, enviar respuesta de error
     if (res) {
       return res.status(500).json({
@@ -1144,5 +1269,6 @@ export {
   enviarEmailRecuperacion,
   generarEmailProductoFavoritoHTML,
   enviarEmailProductoFavorito,
-  enviarEmailConfirmacionOrden
+  enviarEmailConfirmacionOrden,
+  enviarEmailConfirmacionOrdenDirecta
 };
