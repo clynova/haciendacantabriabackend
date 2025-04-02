@@ -2,16 +2,14 @@ import jwt from 'jsonwebtoken';
 import { User } from '../models/User.js';
 import { TokenBlacklist } from '../models/TokenBlacklist.js';
 
-const  checkAuth = async (req, res, next) => {
+const checkAuth = async (req, res, next) => {
     try {
         let token;
 
-        // Verificar si el token está en el encabezado Authorization
         if (req.headers.authorization?.startsWith('Bearer ')) {
-            token = req.headers.authorization.split(' ')[1].trim(); // Extraer y limpiar el token
+            token = req.headers.authorization.split(' ')[1].trim();
         }
 
-        // Si no hay token, devolver un error
         if (!token) {
             return res.status(401).json({
                 success: false,
@@ -19,10 +17,7 @@ const  checkAuth = async (req, res, next) => {
             });
         }
 
-        // Verificar y decodificar el token
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
-
-        // Buscar el usuario en la base de datos
         const user = await User.findById(decoded._id).select("-password -token");
 
         if (!user) {
@@ -32,7 +27,14 @@ const  checkAuth = async (req, res, next) => {
             });
         }
 
-        // Verificar si el usuario esta confirmado
+        // Verificar si el usuario está activo
+        if (!user.estado) {
+            return res.status(403).json({
+                success: false,
+                msg: 'Acceso denegado: Usuario desactivado'
+            });
+        }
+
         if (!user.confirmado) {
             return res.status(403).json({
                 success: false,
@@ -40,10 +42,8 @@ const  checkAuth = async (req, res, next) => {
             });
         }
 
-        // Adjuntar el usuario al objeto `req` para usarlo en el controlador
         req.user = user;
         next();
-
     } catch (err) {
         console.error("Error en checkAuth:", err);
 

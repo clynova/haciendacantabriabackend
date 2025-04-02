@@ -8,7 +8,6 @@ import { enviarEmailConfirmacion, enviarEmailRecuperacion } from "./emailControl
 
 const registrar = async (req, res) => {
     try {
-
         const errors = validationResult(req);
         if (!errors.isEmpty()) {
             return res.status(400).send({ success: false, msg: "Errores de validación", errors: errors.array() });
@@ -20,6 +19,7 @@ const registrar = async (req, res) => {
         }
 
         req.body.token = generarCodigo();
+        req.body.estado = true; // Establecer estado activo por defecto
         const user = new User(req.body);
         const userGuardado = await user.save();
 
@@ -117,6 +117,11 @@ const autenticar = async (req, res) => {
             return res.status(400).send({ success: false, msg: "El correo ingresado no existe" });
         }
 
+        // Verificar si el usuario está activo
+        if (!usuarioExistente.estado) {
+            return res.status(403).send({ success: false, msg: "Usuario desactivado. Contacte al administrador" });
+        }
+
         if (!usuarioExistente.confirmado) {
             return res.status(400).send({ success: false, msg: "El usuario no ha activado su cuenta" });
         }
@@ -141,7 +146,8 @@ const autenticar = async (req, res) => {
                 lastName: usuarioExistente.lastName,
                 email: usuarioExistente.email,
                 roles: usuarioExistente.roles,
-                confirmado: usuarioExistente.confirmado
+                confirmado: usuarioExistente.confirmado,
+                estado: usuarioExistente.estado
             }
         });
     } catch (err) {
@@ -611,6 +617,57 @@ const nuevoPassword = async (req, res) => {
     }
 };
 
+const updateUserStatus = async (req, res) => {
+    try {
+        // Verificar que el usuario sea admin
+        if (!req.user.roles.includes('admin')) {
+            return res.status(403).json({
+                success: false,
+                msg: "No tienes permiso para realizar esta acción"
+            });
+        }
+
+        const { userId } = req.params;
+        const { estado } = req.body;
+
+        if (typeof estado !== 'boolean') {
+            return res.status(400).json({
+                success: false,
+                msg: "El estado debe ser un valor booleano"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                msg: "Usuario no encontrado"
+            });
+        }
+
+        user.estado = estado;
+        await user.save();
+
+        res.status(200).json({
+            success: true,
+            msg: `Usuario ${estado ? 'activado' : 'desactivado'} correctamente`,
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                estado: user.estado
+            }
+        });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({
+            success: false,
+            msg: "Error al actualizar el estado del usuario"
+        });
+    }
+};
+
 export {
     registrar,
     confirmar,
@@ -629,5 +686,6 @@ export {
     deleteAddress,
     setActiveAddress,
     getAddresses,
-    nuevoPassword
+    nuevoPassword,
+    updateUserStatus
 };
