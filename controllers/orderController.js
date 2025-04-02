@@ -69,6 +69,8 @@ const createOrder = async (req, res) => {
             return res.status(400).json({ success: false, msg: "El carrito está vacío" });
         }
 
+        console.log(cart)
+
         // Calcular el subtotal de productos y verificar el stock
         let subtotal = 0;
         let totalWeight = 0;
