@@ -17,7 +17,8 @@ import {
     updateAddress,
     deleteAddress,
     setActiveAddress,
-    getAddresses
+    getAddresses,
+    updateUserStatus
 } from '../controllers/userController.js';
 import {
     validateUserRegistration,
@@ -54,6 +55,7 @@ userRoutes.delete('/delete-account/:userId', deleteAccount); // Eliminar cuenta 
 
 // Rutas de administración (solo para administradores)
 userRoutes.get('/all', checkRole('admin'), getAllUsers); // Obtener todos los usuarios (solo para administradores)
+userRoutes.put('/status/:userId', checkAuth, checkRole('admin'), updateUserStatus); // Actualizar estado de un usuario (solo para administradores)
 
 // Rutas de direcciones
 userRoutes.post('/addresses', addressValidationRules, addAddress);

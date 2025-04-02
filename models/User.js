@@ -14,6 +14,10 @@ const addressSchema = new mongoose.Schema({
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true, trim: true },
   lastName: { type: String, required: true, trim: true },
+  estado: {
+    type: Boolean,
+    default: true
+},
   email: {
     type: String,
     required: true,
