@@ -2,6 +2,7 @@ import { ProductoBase } from '../models/Product.js';
 import { Order } from '../models/Order.js';
 import { User } from '../models/User.js';
 import { Quotation } from '../models/Quotation.js';
+import { OrderDetail } from '../models/OrderDetail.js';
 
 const getDashboardStats = async (req, res) => {
     try {
@@ -276,4 +277,60 @@ const getOrderStats = async (req, res) => {
     }
 };
 
-export { getDashboardStats, getTopTags, getTotalSales, getQuotationStats, getOrderStats };
+const getTopProducts = async (req, res) => {
+    try {
+        const { limit = 5 } = req.query;
+        
+        // Agregar los detalles de órdenes para obtener los productos más vendidos
+        const topProducts = await OrderDetail.aggregate([
+            // Agrupar por producto y sumar cantidades
+            {
+                $group: {
+                    _id: "$productId",
+                    totalVendido: { $sum: "$quantity" },
+                    totalIngresos: { $sum: { $multiply: ["$price", "$quantity"] } }
+                }
+            },
+            // Ordenar por cantidad vendida descendente
+            { $sort: { totalVendido: -1 } },
+            // Limitar resultados
+            { $limit: parseInt(limit) },
+            // Obtener información del producto
+            {
+                $lookup: {
+                    from: "productos",
+                    localField: "_id",
+                    foreignField: "_id",
+                    as: "producto"
+                }
+            },
+            // Desempaquetar el array de producto
+            { $unwind: "$producto" },
+            // Dar formato a la salida
+            {
+                $project: {
+                    _id: 1,
+                    nombre: "$producto.nombre",
+                    sku: "$producto.sku",
+                    totalVendido: 1,
+                    totalIngresos: 1
+                }
+            }
+        ]);
+
+        res.status(200).json({
+            success: true,
+            msg: 'Productos más vendidos',
+            data: topProducts
+        });
+
+    } catch (error) {
+        res.status(500).json({
+            success: false,
+            msg: 'Error al obtener los productos más vendidos',
+            error: error.message
+        });
+    }
+};
+
+export { getDashboardStats, getTopTags, getTotalSales, getQuotationStats, getOrderStats, getTopProducts };
