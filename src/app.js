@@ -40,7 +40,9 @@ app.use(cors({
   origin: process.env.NODE_ENV === 'production'
     ? [
       'https://shop.cohesaspa.com/',
-      'https://shop.cohesaspa.com']
+      'https://shop.cohesaspa.com',
+      'https://haciendacantabriafrontend.vercel.app',
+      'https://haciendacantabriafrontend.vercel.app/',]
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   credentials: true
