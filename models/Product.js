@@ -130,19 +130,57 @@ const EsquemaProductoBase = new Schema({
         type: Map,
         of: Schema.Types.Mixed
     },
-    inventario: {
-        stockUnidades: {
-            type: Number,
-            min: 0
+    opcionesPeso: {
+        esPesoVariable: {
+            type: Boolean,
+            default: true
         },
-        umbralStockBajo: {
-            type: Number,
-            default: 5
-        },
-        ultimaActualizacion: {
-            type: Date,
-            default: Date.now
-        }
+        pesoPromedio: Number,
+        pesoMinimo: Number,
+        pesoMaximo: Number,
+        pesosEstandar: [{
+            peso: Number,
+            unidad: {
+                type: String,
+                enum: ['g', 'kg', 'ml', 'L', 'unidades'],
+                default: 'g'
+            },
+            esPredeterminado: {
+                type: Boolean,
+                default: false
+            },
+            precio: Number,
+            sku: String,
+            stockDisponible: {
+                type: Number,
+                min: 0,
+                default: 0
+            }, // Stock específico para esta variante
+            umbralStockBajo: {
+                type: Number,
+                default: 5
+            }, // Umbral de stock bajo para esta variante
+            ultimaActualizacion: {
+                type: Date,
+                default: Date.now
+            } // Última actualización del stock
+        }],
+        rangosPreferidos: [{
+            nombre: String,
+            pesoMinimo: {
+                type: Number,
+                required: true
+            },
+            pesoMaximo: {
+                type: Number,
+                required: true
+            },
+            descripcion: String,
+            esPredeterminado: {
+                type: Boolean,
+                default: false
+            }
+        }]
     },
     tags: [{ type: String, trim: true }],
     fechaCreacion: { type: Date, default: Date.now },
@@ -208,45 +246,6 @@ const EsquemaProductoCarne = new Schema({
             descripcion: String
         }]
     },
-    opcionesPeso: {
-        esPesoVariable: {
-            type: Boolean,
-            default: true
-        },
-        pesoPromedio: Number,
-        pesoMinimo: Number,
-        pesoMaximo: Number,
-        pesosEstandar: [{
-            peso: Number,
-            unidad: {
-                type: String,
-                enum: ['g', 'kg'],
-                default: 'g'
-            },
-            esPredeterminado: {
-                type: Boolean,
-                default: false
-            },
-            precio: Number,
-            sku: String
-        }],
-        rangosPreferidos: [{
-            nombre: String,
-            pesoMinimo: {
-                type: Number,
-                required: true
-            },
-            pesoMaximo: {
-                type: Number,
-                required: true
-            },
-            descripcion: String,
-            esPredeterminado: {
-                type: Boolean,
-                default: false
-            }
-        }]
-    },
     empaque: {
         tipo: {
             type: String,
@@ -280,10 +279,6 @@ const EsquemaProductoAceite = new Schema({
             enum: TipoAceite,
             required: true
         },
-        volumen: {
-            type: Number,
-            required: true
-        },
         envase: {
             type: String,
             enum: TipoEnvase
@@ -310,16 +305,7 @@ const EsquemaProductoAceite = new Schema({
         temperatura: String,
         fechaEnvasado: Date,
         fechaVencimiento: Date
-    },
-    opcionesVolumen: [{
-        volumen: Number,
-        esPredeterminado: {
-            type: Boolean,
-            default: false
-        },
-        precio: Number,
-        sku: String
-    }]
+    }
 });
 
 // Virtuals
