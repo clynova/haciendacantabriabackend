@@ -1,15 +1,24 @@
 import express from 'express';
-import { addToCart, removeFromCart, clearCart, removeProductFromCart, loadCart } from '../controllers/cartController.js';
-import { checkAuth, checkOwnerOrAdmin } from '../middleware/authMiddleware.js';
-import { Cart } from '../models/Cart.js';
+import { 
+    addToCart, 
+    removeFromCart, 
+    clearCart, 
+    removeProductFromCart, 
+    loadCart,
+    updateProductQuantity 
+} from '../controllers/cartController.js';
+import { checkAuth } from '../middleware/authMiddleware.js';
 
 const cartRoutes = express.Router();
 
+// Proteger todas las rutas
+cartRoutes.use(checkAuth);
 
-cartRoutes.get('/', checkAuth, loadCart);
-cartRoutes.post('/', checkAuth, addToCart);
-cartRoutes.patch('/:productId', checkAuth, removeFromCart);
-cartRoutes.delete('/', checkAuth, clearCart);
-cartRoutes.delete('/:productId', checkAuth, removeProductFromCart);
+cartRoutes.get('/', loadCart);
+cartRoutes.post('/add', addToCart);
+cartRoutes.patch('/remove/:productId', removeFromCart);
+cartRoutes.delete('/clear', clearCart);
+cartRoutes.delete('/product/:productId', removeProductFromCart);
+cartRoutes.put('/update-quantity/:productId', updateProductQuantity);
 
 export { cartRoutes };
