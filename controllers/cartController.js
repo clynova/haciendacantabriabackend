@@ -4,11 +4,12 @@ import mongoose from 'mongoose';
 
 const addToCart = async (req, res) => {
     try {
-        let { productId, quantity } = req.body;
+        let { productId, quantity, variantId } = req.body;
         const userId = req.user._id;
 
-        if (!Number.isInteger(quantity) || !mongoose.Types.ObjectId.isValid(productId) ) {
-            return res.status(200).json({ success: true , msg: "Cargando datos" });      
+        // Validaciones básicas
+        if (!Number.isInteger(quantity) || !mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(200).json({ success: true, msg: "Cargando datos" });
         }
         
         // Validar el ID del producto
@@ -32,32 +33,61 @@ const addToCart = async (req, res) => {
             return res.status(400).json({ success: false, msg: "Este producto no está disponible actualmente" });
         }
 
-        // Verificar stock según el tipo de producto
-        if (product.tipoProducto === 'ProductoCarne' && product.opcionesPeso.pesosEstandar.stockDisponible < 0) {
-            return res.status(400).json({ success: false, msg: "Producto sin stock disponible" });
-        } else if (product.tipoProducto === 'ProductoAceite' && product.opcionesPeso.pesosEstandar.stockDisponible < quantity) {
-            return res.status(400).json({ success: false, msg: "Stock insuficiente" });
+        // Buscar la variante específica del producto
+        if (!variantId) {
+            return res.status(400).json({ success: false, msg: "Debe seleccionar una variante de peso" });
+        }
+
+        // Encontrar la variante seleccionada
+        const selectedVariant = product.opcionesPeso.pesosEstandar.id(variantId);
+        if (!selectedVariant) {
+            return res.status(404).json({ success: false, msg: "Variante de peso no encontrada" });
+        }
+
+        // Verificar stock de la variante específica
+        if (selectedVariant.stockDisponible < quantity) {
+            return res.status(400).json({ success: false, msg: "Stock insuficiente para la variante seleccionada" });
         }
 
         // Buscar el carrito del usuario
         let cart = await Cart.findOne({ userId });
 
+        // Preparar objeto de variante para guardar en el carrito
+        const variantInfo = {
+            pesoId: selectedVariant._id,
+            peso: selectedVariant.peso,
+            unidad: selectedVariant.unidad,
+            precio: selectedVariant.precio,
+            sku: selectedVariant.sku
+        };
+
         if (!cart) {
-            // Si no existe, crear un nuevo carrito con el producto
+            // Si no existe, crear un nuevo carrito con el producto y su variante
             cart = new Cart({
                 userId,
-                products: [{ productId, quantity }],
+                products: [{
+                    productId,
+                    quantity,
+                    variant: variantInfo
+                }],
             });
         } else {
-            // Buscar si el producto ya está en el carrito
-            const productIndex = cart.products.findIndex(p => p.productId.toString() === productId);
+            // Buscar si el producto con la misma variante ya está en el carrito
+            const productIndex = cart.products.findIndex(p => 
+                p.productId.toString() === productId && 
+                p.variant.pesoId.toString() === variantId.toString()
+            );
 
             if (productIndex > -1) {
-                // Si el producto ya está en el carrito, incrementar la cantidad
+                // Si el producto con esa variante ya está en el carrito, incrementar la cantidad
                 cart.products[productIndex].quantity += quantity;
             } else {
-                // Si el producto no está en el carrito, agregarlo
-                cart.products.push({ productId, quantity });
+                // Si el producto o la variante no está en el carrito, agregarlo
+                cart.products.push({
+                    productId,
+                    quantity,
+                    variant: variantInfo
+                });
             }
         }
 
@@ -77,7 +107,7 @@ const addToCart = async (req, res) => {
 const removeFromCart = async (req, res) => {
     try {
         const { productId } = req.params;
-        const { quantity } = req.body;
+        const { quantity, variantId } = req.body;
         const userId = req.user._id;
 
         if (!mongoose.Types.ObjectId.isValid(productId)) {
@@ -88,6 +118,10 @@ const removeFromCart = async (req, res) => {
             return res.status(400).json({ success: false, msg: "Cantidad inválida" });
         }
 
+        if (!variantId) {
+            return res.status(400).json({ success: false, msg: "Debe especificar la variante a remover" });
+        }
+
         // Verificar si el carrito existe
         let cart = await Cart.findOne({ userId });
 
@@ -95,11 +129,14 @@ const removeFromCart = async (req, res) => {
             return res.status(404).json({ success: false, msg: "El carrito está vacío" });
         }
 
-        // Buscar si el producto está en el carrito
-        const productIndex = cart.products.findIndex(p => p.productId.toString() === productId);
+        // Buscar si el producto con la variante específica está en el carrito
+        const productIndex = cart.products.findIndex(p => 
+            p.productId.toString() === productId && 
+            p.variant.pesoId.toString() === variantId.toString()
+        );
 
         if (productIndex === -1) {
-            return res.status(404).json({ success: false, msg: "El producto no está en el carrito" });
+            return res.status(404).json({ success: false, msg: "El producto con esa variante no está en el carrito" });
         }
 
         // Reducir la cantidad o eliminar el producto si llega a 0
@@ -115,7 +152,6 @@ const removeFromCart = async (req, res) => {
             return res.status(200).json({ success: true, msg: "El carrito ha sido eliminado porque quedó vacío" });
         }
 
-
         cart.updatedAt = new Date();
         await cart.save();
 
@@ -129,7 +165,6 @@ const removeFromCart = async (req, res) => {
 const clearCart = async (req, res) => {
     try {
         const userId = req.user._id;
-
 
         const cart = await Cart.findOne({ userId });
         if (!cart) {
@@ -149,6 +184,7 @@ const removeProductFromCart = async (req, res) => {
     try {
         const userId = req.user._id;
         const { productId } = req.params;
+        const { variantId } = req.query;
 
         let cart = await Cart.findOne({ userId });
 
@@ -156,13 +192,22 @@ const removeProductFromCart = async (req, res) => {
             return res.status(404).json({ success: false, msg: "El carrito está vacío" });
         }
 
-        const productIndex = cart.products.findIndex(p => p.productId.toString() === productId);
+        // Si se proporciona variantId, eliminar solo esa variante específica
+        if (variantId) {
+            const productIndex = cart.products.findIndex(p => 
+                p.productId.toString() === productId && 
+                p.variant.pesoId.toString() === variantId
+            );
 
-        if (productIndex === -1) {
-            return res.status(404).json({ success: false, msg: "El producto no está en el carrito" });
+            if (productIndex === -1) {
+                return res.status(404).json({ success: false, msg: "El producto con esa variante no está en el carrito" });
+            }
+
+            cart.products.splice(productIndex, 1);
+        } else {
+            // Eliminar todas las variantes de este producto
+            cart.products = cart.products.filter(p => p.productId.toString() !== productId);
         }
-
-        cart.products.splice(productIndex, 1);
 
         if (cart.products.length === 0) {
             await Cart.findByIdAndDelete(cart._id);
@@ -172,10 +217,10 @@ const removeProductFromCart = async (req, res) => {
         cart.updatedAt = new Date();
         await cart.save();
 
-        res.status(200).json({ success: true, msg: "Carrito vaciado exitosamente" });
+        res.status(200).json({ success: true, cart, msg: "Producto eliminado del carrito exitosamente" });
     } catch (err) {
-        console.error("Error al vaciar el carrito:", err);
-        res.status(500).json({ success: false, msg: "Error al vaciar el carrito" });
+        console.error("Error al eliminar producto del carrito:", err);
+        res.status(500).json({ success: false, msg: "Error al eliminar producto del carrito" });
     }
 }
 
@@ -187,7 +232,7 @@ const loadCart = async (req, res) => {
             .populate({
                 path: 'products.productId',
                 model: ProductoBase,
-                select: 'nombre codigo sku categoria estado precios multimedia tipoProducto infoCarne infoAceite slug'
+                select: 'nombre codigo sku categoria estado precios multimedia tipoProducto infoCarne infoAceite slug opcionesPeso'
             });
 
         if (!cart) {
@@ -199,15 +244,62 @@ const loadCart = async (req, res) => {
             item.productId && item.productId.estado
         );
 
+        // Verificar stock actual para cada producto y su variante
+        for (const item of cart.products) {
+            if (item.productId) {
+                const product = item.productId;
+                const variantId = item.variant.pesoId;
+                
+                // Buscar la variante actual en el producto
+                let currentVariant = null;
+                
+                if (product.opcionesPeso && product.opcionesPeso.pesosEstandar) {
+                    currentVariant = product.opcionesPeso.pesosEstandar.find(
+                        v => v._id.toString() === variantId.toString()
+                    );
+                }
+                
+                // Si la variante ya no existe o no tiene stock suficiente, ajustar la cantidad
+                if (!currentVariant || currentVariant.stockDisponible < item.quantity) {
+                    if (!currentVariant) {
+                        item.unavailable = true;
+                        item.unavailableReason = "Variante no disponible";
+                    } else if (currentVariant.stockDisponible < item.quantity) {
+                        item.quantity = currentVariant.stockDisponible;
+                        item.adjustedQuantity = true;
+                        
+                        if (currentVariant.stockDisponible === 0) {
+                            item.unavailable = true;
+                            item.unavailableReason = "Sin stock";
+                        }
+                    }
+                }
+            }
+        }
+
+        // Filtrar los productos que ya no están disponibles
+        const unavailableProducts = cart.products.filter(item => item.unavailable);
+        cart.products = cart.products.filter(item => !item.unavailable);
+
         // Si se eliminaron productos, actualizar el carrito
         if (cart.products.length === 0) {
             await Cart.findByIdAndDelete(cart._id);
-            return res.status(200).json({ success: true, msg: "El carrito está vacío" });
+            return res.status(200).json({ 
+                success: true, 
+                msg: "El carrito está vacío",
+                unavailableProducts: unavailableProducts.length > 0 ? unavailableProducts : undefined
+            });
         }
 
         await cart.save();
 
-        res.status(200).json({ success: true, cart, msg: "Se envió correctamente el carrito" });
+        res.status(200).json({ 
+            success: true, 
+            cart, 
+            msg: "Se envió correctamente el carrito",
+            unavailableProducts: unavailableProducts.length > 0 ? unavailableProducts : undefined,
+            adjustedItems: cart.products.some(item => item.adjustedQuantity)
+        });
 
     } catch (err) {
         console.error("Error al enviar el carrito de compras del usuario: ", err);
@@ -215,6 +307,112 @@ const loadCart = async (req, res) => {
     }
 }
 
+const updateProductQuantity = async (req, res) => {
+    try {
+        const { productId } = req.params;
+        const { quantity, variantId, action } = req.body;
+        const userId = req.user._id;
 
+        // Validar el ID del producto
+        if (!mongoose.Types.ObjectId.isValid(productId)) {
+            return res.status(400).json({ success: false, msg: "ID de producto inválido" });
+        }
 
-export { addToCart, removeFromCart, clearCart, removeProductFromCart, loadCart };
+        // Validar la acción (increment/decrement)
+        if (!action || !['increment', 'decrement'].includes(action)) {
+            return res.status(400).json({ success: false, msg: "Acción inválida. Debe ser 'increment' o 'decrement'" });
+        }
+
+        // Validar cantidad
+        if (!Number.isInteger(quantity) || quantity < 1) {
+            return res.status(400).json({ success: false, msg: "Cantidad inválida" });
+        }
+
+        // Validar variantId
+        if (!variantId) {
+            return res.status(400).json({ success: false, msg: "Debe especificar la variante del producto" });
+        }
+
+        // Buscar el carrito del usuario
+        let cart = await Cart.findOne({ userId });
+        if (!cart) {
+            return res.status(404).json({ success: false, msg: "Carrito no encontrado" });
+        }
+
+        // Buscar el producto y su variante en el carrito
+        const productIndex = cart.products.findIndex(p => 
+            p.productId.toString() === productId && 
+            p.variant.pesoId.toString() === variantId
+        );
+
+        if (productIndex === -1) {
+            return res.status(404).json({ success: false, msg: "Producto no encontrado en el carrito" });
+        }
+
+        // Obtener el producto actual para verificar stock
+        const product = await ProductoBase.findById(productId);
+        if (!product) {
+            return res.status(404).json({ success: false, msg: "Producto no encontrado en la base de datos" });
+        }
+
+        // Encontrar la variante seleccionada
+        const selectedVariant = product.opcionesPeso.pesosEstandar.id(variantId);
+        if (!selectedVariant) {
+            return res.status(404).json({ success: false, msg: "Variante de peso no encontrada" });
+        }
+
+        let newQuantity;
+        if (action === 'increment') {
+            newQuantity = cart.products[productIndex].quantity + quantity;
+            
+            // Verificar si hay suficiente stock
+            if (newQuantity > selectedVariant.stockDisponible) {
+                return res.status(400).json({ 
+                    success: false, 
+                    msg: "Stock insuficiente",
+                    availableStock: selectedVariant.stockDisponible 
+                });
+            }
+        } else { // decrement
+            newQuantity = cart.products[productIndex].quantity - quantity;
+            
+            // Si la nueva cantidad es 0 o menor, eliminar el producto del carrito
+            if (newQuantity <= 0) {
+                cart.products.splice(productIndex, 1);
+                
+                // Si el carrito queda vacío, eliminarlo
+                if (cart.products.length === 0) {
+                    await Cart.findByIdAndDelete(cart._id);
+                    return res.status(200).json({ 
+                        success: true, 
+                        msg: "Producto eliminado y carrito vacío",
+                        cart: null
+                    });
+                }
+            } else {
+                cart.products[productIndex].quantity = newQuantity;
+            }
+        }
+
+        // Si llegamos aquí y estamos incrementando, actualizar la cantidad
+        if (action === 'increment') {
+            cart.products[productIndex].quantity = newQuantity;
+        }
+
+        // Actualizar la fecha de modificación y guardar el carrito
+        cart.updatedAt = new Date();
+        await cart.save();
+
+        res.status(200).json({ 
+            success: true, 
+            cart,
+            msg: `Cantidad ${action === 'increment' ? 'aumentada' : 'disminuida'} exitosamente`
+        });
+
+    } catch (err) {
+        console.error("Error al actualizar la cantidad del producto:", err);
+        res.status(500).json({ success: false, msg: "Error al actualizar la cantidad del producto" });
+    }
+};
+
+export { addToCart, removeFromCart, clearCart, removeProductFromCart, loadCart, updateProductQuantity };
