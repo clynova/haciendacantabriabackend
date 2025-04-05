@@ -25,13 +25,29 @@ const baseProductValidationRules = [
     body('descripcion.completa')
         .optional(),
 
-    body('precios.base')
-        .notEmpty().withMessage('El precio base es requerido')
-        .isFloat({ min: 0 }).withMessage('El precio base debe ser un número positivo'),
+    body('opcionesPeso.pesosEstandar')
+        .isArray().withMessage('Las variantes de peso deben ser un array')
+        .notEmpty().withMessage('Debe incluir al menos una variante de peso'),
 
-    body('precios.descuentos.regular')
+    body('opcionesPeso.pesosEstandar.*.peso')
+        .notEmpty().withMessage('El peso de la variante es requerido')
+        .isFloat({ min: 0 }).withMessage('El peso debe ser un número positivo'),
+
+    body('opcionesPeso.pesosEstandar.*.unidad')
+        .notEmpty().withMessage('La unidad de peso es requerida')
+        .isIn(['g', 'kg', 'ml', 'L', 'unidades']).withMessage('Unidad no válida'),
+
+    body('opcionesPeso.pesosEstandar.*.precio')
+        .notEmpty().withMessage('El precio de la variante es requerido')
+        .isFloat({ min: 0 }).withMessage('El precio debe ser un número positivo'),
+
+    body('opcionesPeso.pesosEstandar.*.descuentos.regular')
         .optional()
         .isFloat({ min: 0, max: 100 }).withMessage('El descuento regular debe estar entre 0 y 100'),
+
+    body('opcionesPeso.pesosEstandar.*.stockDisponible')
+        .optional()
+        .isInt({ min: 0 }).withMessage('El stock disponible debe ser un número entero positivo'),
 
     body('multimedia.imagenes.*.url')
         .optional(),
@@ -64,6 +80,14 @@ const validateProductModificar = [
     body('nombre').optional().trim().notEmpty().withMessage('El nombre no puede estar vacío'),
     body('categoria').optional().isIn(CategoriaProducto).withMessage('Categoría no válida'),
     body('tipoProducto').optional().isIn(['ProductoCarne', 'ProductoAceite']).withMessage('Tipo de producto no válido'),
+
+    // Validaciones para las variantes de peso
+    body('opcionesPeso.pesosEstandar').optional().isArray().withMessage('Las variantes de peso deben ser un array'),
+    body('opcionesPeso.pesosEstandar.*.peso').optional().isFloat({ min: 0 }).withMessage('El peso debe ser un número positivo'),
+    body('opcionesPeso.pesosEstandar.*.unidad').optional().isIn(['g', 'kg', 'ml', 'L', 'unidades']).withMessage('Unidad no válida'),
+    body('opcionesPeso.pesosEstandar.*.precio').optional().isFloat({ min: 0 }).withMessage('El precio debe ser un número positivo'),
+    body('opcionesPeso.pesosEstandar.*.descuentos.regular').optional().isFloat({ min: 0, max: 100 }).withMessage('El descuento regular debe estar entre 0 y 100'),
+    body('opcionesPeso.pesosEstandar.*.stockDisponible').optional().isInt({ min: 0 }).withMessage('El stock disponible debe ser un número entero positivo'),
 
     // Validaciones específicas para ProductoCarne
     body('infoCarne.tipoCarne').optional().isIn(TipoCarne).withMessage('Tipo de carne no válido'),

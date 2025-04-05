@@ -85,15 +85,56 @@ const createProduct = async (req, res) => {
                 .map(tag => tag.trim());
         }
 
-        // Validar precios - asegurarse de que sean números
-        if (req.body.precios) {
-            if (req.body.precios.base && typeof req.body.precios.base !== 'number') {
-                req.body.precios.base = Number(req.body.precios.base);
+        // Validar variantes de peso y sus precios
+        if (req.body.opcionesPeso && req.body.opcionesPeso.pesosEstandar) {
+            if (!Array.isArray(req.body.opcionesPeso.pesosEstandar)) {
+                return res.status(400).send({
+                    success: false,
+                    msg: "El campo 'opcionesPeso.pesosEstandar' debe ser un array"
+                });
             }
-            if (req.body.precios.descuentos && req.body.precios.descuentos.regular && 
-                typeof req.body.precios.descuentos.regular !== 'number') {
-                req.body.precios.descuentos.regular = Number(req.body.precios.descuentos.regular);
+
+            // Validar que cada variante tenga precio, peso y unidad
+            for (let i = 0; i < req.body.opcionesPeso.pesosEstandar.length; i++) {
+                const variante = req.body.opcionesPeso.pesosEstandar[i];
+                
+                if (!variante.precio || isNaN(Number(variante.precio))) {
+                    return res.status(400).send({
+                        success: false,
+                        msg: `La variante ${i + 1} debe tener un precio válido`
+                    });
+                }
+
+                if (!variante.peso || isNaN(Number(variante.peso))) {
+                    return res.status(400).send({
+                        success: false,
+                        msg: `La variante ${i + 1} debe tener un peso válido`
+                    });
+                }
+
+                if (!variante.unidad) {
+                    return res.status(400).send({
+                        success: false,
+                        msg: `La variante ${i + 1} debe tener una unidad`
+                    });
+                }
+
+                // Convertir precio a número si viene como string
+                variante.precio = Number(variante.precio);
+                
+                // Asegurarse que descuentos sea un objeto válido
+                if (!variante.descuentos) {
+                    variante.descuentos = { regular: 0 };
+                } else if (typeof variante.descuentos.regular !== 'number') {
+                    variante.descuentos.regular = Number(variante.descuentos.regular) || 0;
+                }
             }
+        } else {
+            // Si no hay variantes de peso, devolver error
+            return res.status(400).send({
+                success: false,
+                msg: "El producto debe tener al menos una variante de peso"
+            });
         }
 
         // Verificar si ya existe un producto con el mismo SKU o slug
@@ -214,6 +255,52 @@ const updateProduct = async (req, res) => {
             ...req.body,
             fechaActualizacion: new Date()
         };
+
+        // Validar variantes de peso y sus precios si se están actualizando
+        if (updateData.opcionesPeso && updateData.opcionesPeso.pesosEstandar) {
+            if (!Array.isArray(updateData.opcionesPeso.pesosEstandar)) {
+                return res.status(400).send({
+                    success: false,
+                    msg: "El campo 'opcionesPeso.pesosEstandar' debe ser un array"
+                });
+            }
+
+            // Validar que cada variante tenga precio, peso y unidad
+            for (let i = 0; i < updateData.opcionesPeso.pesosEstandar.length; i++) {
+                const variante = updateData.opcionesPeso.pesosEstandar[i];
+                
+                if (!variante.precio || isNaN(Number(variante.precio))) {
+                    return res.status(400).send({
+                        success: false,
+                        msg: `La variante ${i + 1} debe tener un precio válido`
+                    });
+                }
+
+                if (!variante.peso || isNaN(Number(variante.peso))) {
+                    return res.status(400).send({
+                        success: false,
+                        msg: `La variante ${i + 1} debe tener un peso válido`
+                    });
+                }
+
+                if (!variante.unidad) {
+                    return res.status(400).send({
+                        success: false,
+                        msg: `La variante ${i + 1} debe tener una unidad`
+                    });
+                }
+
+                // Convertir precio a número si viene como string
+                variante.precio = Number(variante.precio);
+                
+                // Asegurarse que descuentos sea un objeto válido
+                if (!variante.descuentos) {
+                    variante.descuentos = { regular: 0 };
+                } else if (typeof variante.descuentos.regular !== 'number') {
+                    variante.descuentos.regular = Number(variante.descuentos.regular) || 0;
+                }
+            }
+        }
 
         // Procesar campos específicos según el tipo de producto
         if (existingProduct.tipoProducto === 'ProductoAceite') {
@@ -354,7 +441,8 @@ const findProducts = async (req, res) => {
             precioMax,
             tipoCarne,
             corte,
-            tipoAceite
+            tipoAceite,
+            tags
         } = req.query;
 
         const filter = {};
@@ -369,13 +457,27 @@ const findProducts = async (req, res) => {
         if (tipoProducto) {
             filter.tipoProducto = tipoProducto;
         }
+
+        // Filtro de precio utilizando las variantes de peso
         if (precioMin !== undefined || precioMax !== undefined) {
-            filter['precios.base'] = {};
-            if (precioMin !== undefined) {
-                filter['precios.base'].$gte = Number(precioMin);
-            }
-            if (precioMax !== undefined) {
-                filter['precios.base'].$lte = Number(precioMax);
+            if (precioMin !== undefined && precioMax !== undefined) {
+                filter['opcionesPeso.pesosEstandar'] = {
+                    $elemMatch: {
+                        precio: { $gte: Number(precioMin), $lte: Number(precioMax) }
+                    }
+                };
+            } else if (precioMin !== undefined) {
+                filter['opcionesPeso.pesosEstandar'] = {
+                    $elemMatch: {
+                        precio: { $gte: Number(precioMin) }
+                    }
+                };
+            } else if (precioMax !== undefined) {
+                filter['opcionesPeso.pesosEstandar'] = {
+                    $elemMatch: {
+                        precio: { $lte: Number(precioMax) }
+                    }
+                };
             }
         }
 
@@ -415,6 +517,7 @@ const findProducts = async (req, res) => {
         });
     }
 };
+
 const getActiveProducts = async (req, res) => {
     try {
         const { categoria, tipoProducto } = req.query;
