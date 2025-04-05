@@ -72,21 +72,6 @@ const EsquemaProductoBase = new Schema({
             type: String
         }
     },
-    precios: {
-        base: {
-            type: Number,
-            required: true,
-            min: 0
-        },
-        descuentos: {
-            regular: {
-                type: Number,
-                default: 0,
-                min: 0,
-                max: 100
-            }
-        }
-    },
     multimedia: {
         imagenes: [{
             url: {
@@ -160,6 +145,14 @@ const EsquemaProductoBase = new Schema({
                 type: Number,
                 default: 5
             }, // Umbral de stock bajo para esta variante
+            descuentos: {
+                regular: {
+                    type: Number,
+                    default: 0,
+                    min: 0,
+                    max: 100
+                }
+            },
             ultimaActualizacion: {
                 type: Date,
                 default: Date.now
