@@ -685,11 +685,12 @@ const createOrderFromQuotation = async (req, res) => {
         const total = subtotalConEnvio + paymentCommission;
 
         // Obtener los detalles de la cotización
-        const quotationDetails = await QuotationDetail.find({ quotationId });
+        const quotationDetails = await QuotationDetail.find({ quotationId }).populate('productId');
 
         // Verificar stock de todos los productos
         for (const detail of quotationDetails) {
-            const producto = await ProductoBase.findById(detail.productId);
+            const producto = detail.productId;
+            
             if (!producto) {
                 return res.status(404).json({ 
                     success: false, 
@@ -710,13 +711,26 @@ const createOrderFromQuotation = async (req, res) => {
                 v => v._id.toString() === detail.variant.pesoId.toString()
             );
 
-            if (!selectedVariant || selectedVariant.stockDisponible < detail.quantity) {
+            if (!selectedVariant) {
+                return res.status(404).json({ 
+                    success: false, 
+                    msg: `Variante de peso no encontrada para el producto: ${producto.nombre}` 
+                });
+            }
+
+            if (selectedVariant.stockDisponible < detail.quantity) {
                 return res.status(400).json({
                     success: false,
-                    msg: `Stock insuficiente para ${producto.nombre}`
+                    msg: `Stock insuficiente para ${producto.nombre} (${selectedVariant.peso} ${selectedVariant.unidad}). Disponible: ${selectedVariant.stockDisponible}, Solicitado: ${detail.quantity}`
                 });
             }
         }
+
+        // Obtener la fecha estimada de entrega
+        const estimatedDeliveryDate = calculateEstimatedDeliveryDate(
+            quotation.shipping.carrier.methods.find(m => m.name === quotation.shipping.method) || 
+            quotation.shipping.carrier.methods[0]
+        );
 
         // Crear la orden
         const order = new Order({
@@ -743,7 +757,7 @@ const createOrderFromQuotation = async (req, res) => {
                 cost: quotation.shipping.cost,
                 trackingNumber: null
             },
-            estimatedDeliveryDate: calculateEstimatedDeliveryDate(quotation.shipping.carrier.methods[0]),
+            estimatedDeliveryDate: estimatedDeliveryDate,
             quotationId: quotation._id
         });
 
@@ -751,30 +765,36 @@ const createOrderFromQuotation = async (req, res) => {
 
         // Crear los detalles de la orden y reducir el stock
         for (const detail of quotationDetails) {
-            const producto = await ProductoBase.findById(detail.productId);
+            const producto = detail.productId;
             
             // Encontrar la variante seleccionada
             const selectedVariant = producto.opcionesPeso.pesosEstandar.find(
                 v => v._id.toString() === detail.variant.pesoId.toString()
             );
+            
+            // Calcular los precios correctamente para el OrderDetail
+            const basePrice = selectedVariant.precio || detail.variant.precio;
+            const discountPercentage = selectedVariant.descuentos?.regular || 0;
+            const finalPrice = basePrice * (1 - (discountPercentage / 100));
+            const itemSubtotal = finalPrice * detail.quantity;
 
-            // Crear el detalle de orden
+            // Crear el detalle de orden con la estructura actual
             const orderDetail = new OrderDetail({
                 orderId: order._id,
-                productId: detail.productId,
+                productId: producto._id,
                 quantity: detail.quantity,
                 variant: {
-                    pesoId: detail.variant.pesoId,
-                    peso: detail.variant.peso,
-                    unidad: detail.variant.unidad,
-                    sku: detail.variant.sku || producto.sku
+                    pesoId: selectedVariant._id,
+                    peso: selectedVariant.peso,
+                    unidad: selectedVariant.unidad,
+                    sku: selectedVariant.sku || producto.sku
                 },
                 priceInfo: {
-                    basePrice: detail.priceInfo.basePrice,
-                    discountPercentage: detail.priceInfo.discountPercentage || 0,
-                    finalPrice: detail.priceInfo.finalPrice
+                    basePrice: basePrice,
+                    discountPercentage: discountPercentage,
+                    finalPrice: finalPrice
                 },
-                subtotal: detail.subtotal,
+                subtotal: itemSubtotal,
                 productSnapshot: {
                     nombre: producto.nombre,
                     categoria: producto.categoria,
