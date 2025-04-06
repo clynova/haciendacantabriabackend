@@ -1264,6 +1264,161 @@ const enviarEmailConfirmacionOrdenDirecta = async (orderId, res = null) => {
   }
 };
 
+/**
+ * Envía un email con un archivo PDF adjunto (boleta o factura)
+ * @param {Object} datos - Datos necesarios para el envío
+ * @param {string} datos.email - Correo electrónico del destinatario
+ * @param {string} datos.firstName - Nombre del destinatario
+ * @param {string} datos.lastName - Apellido del destinatario (opcional)
+ * @param {Buffer|string} datos.pdfBuffer - Buffer del PDF o ruta al archivo temporal
+ * @param {string} datos.documentType - Tipo de documento (boleta/factura)
+ * @param {string} datos.documentNumber - Número de documento (opcional)
+ * @returns {Promise<Object>} - Resultado del envío del email
+ */
+const enviarEmailConPDF = async (datos) => {
+  try {
+    const { email, firstName, lastName = '', pdfBuffer, documentType, documentNumber = '' } = datos;
+    
+    if (!email || !pdfBuffer) {
+      throw new Error('Email del destinatario y archivo PDF son requeridos');
+    }
+
+    const transporter = createTransporter();
+    
+    // Determinar el tipo de documento para el asunto y contenido
+    const tipoDocumento = documentType.toLowerCase() === 'factura' ? 'factura' : 'boleta';
+    const documentoMayuscula = tipoDocumento.charAt(0).toUpperCase() + tipoDocumento.slice(1);
+    
+    // Configurar número de documento para mostrar si está disponible
+    const numeroDocumento = documentNumber ? ` #${documentNumber}` : '';
+    
+    // Generar el contenido HTML del email
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${documentoMayuscula}${numeroDocumento} - Hacienda Cantabria</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+            line-height: 1.6;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          }
+          .header {
+            background-color: #2C3E50;
+            padding: 30px 20px;
+            text-align: center;
+          }
+          .header-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+            letter-spacing: 0.5px;
+          }
+          .content {
+            padding: 30px 20px;
+          }
+          .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+          }
+          .footer {
+            background-color: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+          }
+          @media only screen and (max-width: 480px) {
+            .container {
+              width: 100%;
+              border-radius: 0;
+            }
+            .content {
+              padding: 20px 15px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 class="header-text">Tu ${documentoMayuscula}${numeroDocumento}</h1>
+          </div>
+          
+          <div class="content">
+            <p class="greeting">Hola ${firstName} ${lastName},</p>
+            <p>
+              Tu ${tipoDocumento}${numeroDocumento} ha sido generada exitosamente. 
+              Puedes encontrarla adjunta en este correo.
+            </p>
+            <p>
+              Cualquier consulta, no dudes en contactarnos respondiendo a este correo
+              o a través de nuestros canales de atención al cliente.
+            </p>
+            <p>
+              Gracias por confiar en Hacienda Cantabria.
+            </p>
+          </div>
+          
+          <div class="footer">
+            <p>Hacienda Cantabria - ${new Date().getFullYear()}</p>
+            <p>Todos los derechos reservados</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Configurar opciones del email
+    const mailOptions = {
+      from: `"Hacienda Cantabria" <${process.env.EMAIL_FROM}>`,
+      to: email,
+      subject: `Tu ${documentoMayuscula}${numeroDocumento} de Hacienda Cantabria`,
+      html: htmlContent,
+      attachments: [{
+        filename: `${documentoMayuscula}${numeroDocumento}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
+    };
+
+    // Enviar el email
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log(`Email con ${tipoDocumento} enviado a ${email}:`, {
+      messageId: info.messageId,
+      response: info.response
+    });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      email
+    };
+  } catch (error) {
+    console.error('Error al enviar email con PDF adjunto:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
 // Exportar las funciones de email
 export {
   enviarEmailConfirmacion,
@@ -1271,5 +1426,6 @@ export {
   generarEmailProductoFavoritoHTML,
   enviarEmailProductoFavorito,
   enviarEmailConfirmacionOrden,
-  enviarEmailConfirmacionOrdenDirecta
+  enviarEmailConfirmacionOrdenDirecta,
+  enviarEmailConPDF
 };

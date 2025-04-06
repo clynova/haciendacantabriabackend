@@ -19,7 +19,16 @@ const createOrder = async (req, res) => {
         }
 
         const userId = req.user._id;
-        const { shippingAddressId, paymentMethod, shippingMethod, recipientName, phoneContact, additionalInstructions } = req.body;
+        const { 
+            shippingAddressId, 
+            paymentMethod, 
+            shippingMethod, 
+            recipientName, 
+            phoneContact, 
+            additionalInstructions,
+            comprobanteTipo,
+            rut
+        } = req.body;
 
         // Obtener el usuario con sus direcciones
         const user = await User.findById(userId);
@@ -200,6 +209,8 @@ const createOrder = async (req, res) => {
                 trackingNumber: null
             },
             estimatedDeliveryDate,
+            comprobanteTipo: comprobanteTipo || 'boleta', // Por defecto es boleta si no se especifica
+            rut: rut || null // RUT opcional
         });
 
         // Guardar la orden
@@ -507,6 +518,8 @@ const updateOrder = async (req, res) => {
         // Actualizar campos básicos si se proporcionan
         if (req.body.status) order.status = req.body.status;
         if (req.body.notes) order.notes = req.body.notes;
+        if (req.body.comprobanteTipo) order.comprobanteTipo = req.body.comprobanteTipo;
+        if (req.body.rut) order.rut = req.body.rut;
 
         // Si se está actualizando el transportista y el método de envío
         if (req.body.shipping) {
@@ -644,7 +657,7 @@ const createOrderFromQuotation = async (req, res) => {
         }
 
         const userId = req.user._id;
-        const { quotationId, paymentMethodId } = req.body;
+        const { quotationId, paymentMethodId, comprobanteTipo, rut } = req.body;
 
         // Obtener y validar la cotización
         const quotation = await Quotation.findById(quotationId)
@@ -758,7 +771,9 @@ const createOrderFromQuotation = async (req, res) => {
                 trackingNumber: null
             },
             estimatedDeliveryDate: estimatedDeliveryDate,
-            quotationId: quotation._id
+            quotationId: quotation._id,
+            comprobanteTipo: comprobanteTipo || 'boleta', // Por defecto es boleta si no se especifica
+            rut: rut || null // RUT opcional
         });
 
         await order.save();
