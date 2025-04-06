@@ -3,6 +3,9 @@ import { Order } from '../models/Order.js';
 import { User } from '../models/User.js';
 import { Quotation } from '../models/Quotation.js';
 import { OrderDetail } from '../models/OrderDetail.js';
+import { enviarEmailConPDF } from '../controllers/emailController.js';
+import fs from 'fs';
+import { promisify } from 'util';
 
 const getDashboardStats = async (req, res) => {
     try {
@@ -333,4 +336,115 @@ const getTopProducts = async (req, res) => {
     }
 };
 
-export { getDashboardStats, getTopTags, getTotalSales, getQuotationStats, getOrderStats, getTopProducts };
+/**
+ * Envía un PDF (boleta o factura) por correo electrónico al usuario
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+const enviarPDFporEmail = async (req, res) => {
+    try {
+        // Validar que se haya enviado un archivo
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                msg: 'No se ha proporcionado ningún archivo PDF'
+            });
+        }
+
+        // Obtener el email del usuario desde el cuerpo de la solicitud
+        const { email, documentType = 'boleta', documentNumber = '' } = req.body;
+
+        if (!email) {
+            // Eliminar el archivo temporal si existe
+            if (req.file && req.file.path) {
+                await promisify(fs.unlink)(req.file.path).catch(err => console.error('Error al eliminar archivo temporal:', err));
+            }
+            
+            return res.status(400).json({
+                success: false,
+                msg: 'El correo electrónico del destinatario es requerido'
+            });
+        }
+
+        // Buscar información del usuario por email
+        const usuario = await User.findOne({ email });
+        
+        if (!usuario) {
+            // Eliminar el archivo temporal si existe
+            if (req.file && req.file.path) {
+                await promisify(fs.unlink)(req.file.path).catch(err => console.error('Error al eliminar archivo temporal:', err));
+            }
+            
+            return res.status(404).json({
+                success: false,
+                msg: 'No se encontró ningún usuario con ese correo electrónico'
+            });
+        }
+
+        // Leer el archivo PDF
+        let pdfBuffer;
+        if (req.file.buffer) {
+            // Si ya tenemos el buffer disponible (depende del middleware)
+            pdfBuffer = req.file.buffer;
+        } else if (req.file.path) {
+            // Si tenemos la ruta del archivo temporal
+            pdfBuffer = await promisify(fs.readFile)(req.file.path);
+        } else {
+            throw new Error('No se pudo acceder al contenido del archivo PDF');
+        }
+
+        // Configurar datos para el envío del email
+        const datosEmail = {
+            email,
+            firstName: usuario.firstName || 'Estimado Cliente',
+            lastName: usuario.lastName || '',
+            pdfBuffer,
+            documentType,
+            documentNumber
+        };
+
+        // Enviar el email con el PDF adjunto
+        const resultado = await enviarEmailConPDF(datosEmail);
+
+        // Eliminar el archivo temporal si existe
+        if (req.file && req.file.path) {
+            await promisify(fs.unlink)(req.file.path).catch(err => console.error('Error al eliminar archivo temporal:', err));
+        }
+
+        if (resultado.success) {
+            return res.status(200).json({
+                success: true,
+                msg: `${documentType === 'factura' ? 'Factura' : 'Boleta'} enviada exitosamente por correo electrónico`,
+                data: {
+                    email,
+                    messageId: resultado.messageId
+                }
+            });
+        } else {
+            throw new Error(resultado.error || 'Error al enviar el email');
+        }
+    } catch (error) {
+        console.error('Error en enviarPDFporEmail:', error);
+        
+        // Eliminar el archivo temporal si existe en caso de error
+        if (req.file && req.file.path) {
+            await promisify(fs.unlink)(req.file.path).catch(err => console.error('Error al eliminar archivo temporal:', err));
+        }
+        
+        return res.status(500).json({
+            success: false,
+            msg: 'Error al enviar el PDF por correo electrónico',
+            error: error.message
+        });
+    }
+};
+
+export { 
+    getDashboardStats, 
+    getTopTags, 
+    getTotalSales, 
+    getQuotationStats, 
+    getOrderStats, 
+    getTopProducts,
+    enviarPDFporEmail 
+};
