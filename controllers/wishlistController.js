@@ -6,12 +6,22 @@ const getWishlist = async (req, res) => {
     try {
         const wishlist = await Wishlist.findOne({ userId: req.user._id }).populate({
             path: 'products',
-            model: ProductoBase
+            model: ProductoBase,
+            select: 'nombre sku slug multimedia categoria opcionesPeso variantePredeterminada estado' // Seleccionamos solo los campos necesarios
         });
+        
+        if (!wishlist) {
+            return res.status(200).json({
+                success: true,
+                msg: 'Wishlist vacía',
+                data: { userId: req.user._id, products: [] }
+            });
+        }
+        
         res.status(200).json({
             success: true,
             msg: 'Wishlist recuperada exitosamente',
-            data: wishlist || { products: [] }
+            data: wishlist
         });
     } catch (err) {
         console.error(err);
@@ -27,6 +37,16 @@ const addToWishlist = async (req, res) => {
         }
 
         const { productId } = req.body;
+        
+        // Verificar si el producto existe
+        const productoExiste = await ProductoBase.findById(productId);
+        if (!productoExiste) {
+            return res.status(404).json({ 
+                success: false, 
+                msg: 'El producto no existe' 
+            });
+        }
+        
         let wishlist = await Wishlist.findOne({ userId: req.user._id });
 
         if (!wishlist) {
@@ -37,13 +57,27 @@ const addToWishlist = async (req, res) => {
         } else if (!wishlist.products.includes(productId)) {
             wishlist.products.push(productId);
             wishlist.updatedAt = new Date();
+        } else {
+            return res.status(200).json({
+                success: true,
+                msg: 'El producto ya está en tu wishlist',
+                data: wishlist
+            });
         }
 
         await wishlist.save();
+        
+        // Obtener la wishlist con los productos populados para devolver
+        const populatedWishlist = await Wishlist.findById(wishlist._id).populate({
+            path: 'products',
+            model: ProductoBase,
+            select: 'nombre sku slug multimedia categoria opcionesPeso variantePredeterminada estado'
+        });
+        
         res.status(200).json({
             success: true,
             msg: 'Producto añadido a la wishlist',
-            data: wishlist
+            data: populatedWishlist
         });
     } catch (err) {
         console.error(err);
@@ -60,14 +94,30 @@ const removeFromWishlist = async (req, res) => {
             return res.status(404).json({ success: false, msg: 'Wishlist no encontrada' });
         }
 
+        // Verificar si el producto estaba en la wishlist
+        const productoEncontrado = wishlist.products.find(id => id.toString() === productId);
+        if (!productoEncontrado) {
+            return res.status(404).json({ 
+                success: false, 
+                msg: 'Producto no encontrado en la wishlist' 
+            });
+        }
+
         wishlist.products = wishlist.products.filter(id => id.toString() !== productId);
         wishlist.updatedAt = new Date();
         await wishlist.save();
+        
+        // Populate products para la respuesta
+        const populatedWishlist = await Wishlist.findById(wishlist._id).populate({
+            path: 'products',
+            model: ProductoBase,
+            select: 'nombre sku slug multimedia categoria opcionesPeso variantePredeterminada estado'
+        });
 
         res.status(200).json({
             success: true,
             msg: 'Producto eliminado de la wishlist',
-            data: wishlist
+            data: populatedWishlist
         });
     } catch (err) {
         console.error(err);
