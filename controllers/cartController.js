@@ -318,9 +318,9 @@ const updateProductQuantity = async (req, res) => {
             return res.status(400).json({ success: false, msg: "ID de producto inválido" });
         }
 
-        // Validar la acción (increment/decrement)
-        if (!action || !['increment', 'decrement'].includes(action)) {
-            return res.status(400).json({ success: false, msg: "Acción inválida. Debe ser 'increment' o 'decrement'" });
+        // Validar la acción (increment/decrement/set)
+        if (!action || !['increment', 'decrement', 'set'].includes(action)) {
+            return res.status(400).json({ success: false, msg: "Acción inválida. Debe ser 'increment', 'decrement' o 'set'" });
         }
 
         // Validar cantidad
@@ -373,7 +373,9 @@ const updateProductQuantity = async (req, res) => {
                     availableStock: selectedVariant.stockDisponible 
                 });
             }
-        } else { // decrement
+            
+            cart.products[productIndex].quantity = newQuantity;
+        } else if (action === 'decrement') {
             newQuantity = cart.products[productIndex].quantity - quantity;
             
             // Si la nueva cantidad es 0 o menor, eliminar el producto del carrito
@@ -392,21 +394,41 @@ const updateProductQuantity = async (req, res) => {
             } else {
                 cart.products[productIndex].quantity = newQuantity;
             }
-        }
-
-        // Si llegamos aquí y estamos incrementando, actualizar la cantidad
-        if (action === 'increment') {
-            cart.products[productIndex].quantity = newQuantity;
+        } else if (action === 'set') {
+            // Verificar si hay suficiente stock para la cantidad solicitada
+            if (quantity > selectedVariant.stockDisponible) {
+                return res.status(400).json({ 
+                    success: false, 
+                    msg: "Stock insuficiente para la cantidad solicitada",
+                    availableStock: selectedVariant.stockDisponible 
+                });
+            }
+            
+            // Actualizar con la cantidad exacta especificada
+            cart.products[productIndex].quantity = quantity;
         }
 
         // Actualizar la fecha de modificación y guardar el carrito
         cart.updatedAt = new Date();
         await cart.save();
 
+        let actionMsg;
+        switch (action) {
+            case 'increment':
+                actionMsg = 'aumentada';
+                break;
+            case 'decrement':
+                actionMsg = 'disminuida';
+                break;
+            case 'set':
+                actionMsg = 'actualizada';
+                break;
+        }
+
         res.status(200).json({ 
             success: true, 
             cart,
-            msg: `Cantidad ${action === 'increment' ? 'aumentada' : 'disminuida'} exitosamente`
+            msg: `Cantidad ${actionMsg} exitosamente`
         });
 
     } catch (err) {
