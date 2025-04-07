@@ -96,6 +96,10 @@ const orderSchema = new mongoose.Schema(
             direccionFacturacion: {
                 type: String,
                 trim: true
+            },
+            status: {
+                type: Boolean,
+                default: false
             }
         } // Datos estructurados para facturación
     },
