@@ -59,10 +59,6 @@ const EsquemaProductoBase = new Schema({
         type: Boolean,
         default: false
     },
-    destacado: {
-        type: Boolean,
-        default: false
-    },
     descripcion: {
         corta: {
             type: String,
@@ -125,6 +121,10 @@ const EsquemaProductoBase = new Schema({
         pesoMaximo: Number,
         pesosEstandar: [{
             peso: Number,
+            estado: {
+                type: Boolean,
+                default: true
+            },
             unidad: {
                 type: String,
                 enum: ['g', 'kg', 'ml', 'L', 'unidades'],
