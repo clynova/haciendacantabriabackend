@@ -3,7 +3,7 @@ import logger from '../utils/logger.js';
 
 const limiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minuto (cambiado para pruebas)
-    max: 50, // límite de 5 solicitudes por ventana por IP
+    max: 500, // límite de 5 solicitudes por ventana por IP
     message: {
         status: 'error',
         message: 'Demasiadas solicitudes desde esta IP, por favor intente nuevamente después de 1 minuto'

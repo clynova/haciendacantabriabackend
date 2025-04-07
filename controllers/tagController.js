@@ -233,7 +233,7 @@ const removeTagsFromProduct = async (req, res) => {
 
         // Eliminar las etiquetas especificadas
         product.tags = product.tags.filter(tag => !tags.includes(tag));
-        
+
         // Guardar el producto
         await product.save();
 
@@ -275,40 +275,45 @@ const findProductsByTags = async (req, res) => {
         // Convertir page y limit a números
         const pageNum = parseInt(page);
         const limitNum = parseInt(limit);
-        
+
         // Calcular el número de documentos a omitir
         const skip = (pageNum - 1) * limitNum;
-        
+
         // Construir la consulta
         let query = {};
-        
+
         if (exact === 'true') {
             // Búsqueda exacta: el array de tags debe tener exactamente los mismos elementos
             // Para esto, necesitamos recuperar todos los productos y filtrar manualmente
             const allProducts = await ProductoBase.find();
-            
+
             const filteredProducts = allProducts.filter(product => {
                 // Verificar si el producto tiene tags
                 if (!product.tags || !Array.isArray(product.tags)) {
                     return false;
                 }
-                
+
                 // Para que sea exacto:
                 // 1. Debe tener la misma cantidad de tags
                 if (product.tags.length !== tagArray.length) {
                     return false;
                 }
-                
+
+                // product active
+                if (!product.estado) {
+                    return false;
+                }
+
                 // 2. Todos los tags solicitados deben estar presentes
                 const hasAllTags = tagArray.every(tag => product.tags.includes(tag));
-                
+
                 return hasAllTags;
             });
-            
+
             // Aplicar paginación manualmente
             const totalProducts = filteredProducts.length;
             const paginatedProducts = filteredProducts.slice(skip, skip + limitNum);
-            
+
             return res.status(200).send({
                 success: true,
                 msg: "Productos con exactamente las mismas etiquetas",
@@ -330,13 +335,13 @@ const findProductsByTags = async (req, res) => {
                 // Al menos un tag debe estar presente (OR)
                 query = { tags: { $in: tagArray } };
             }
-            
+
             // Ejecutar la consulta con paginación
             const totalProducts = await ProductoBase.countDocuments(query);
             const products = await ProductoBase.find(query)
                 .skip(skip)
                 .limit(limitNum);
-    
+
             res.status(200).send({
                 success: true,
                 msg: matchAll === 'true' ?
@@ -380,30 +385,30 @@ const findAllProductsByTags = async (req, res) => {
         const limitNum = parseInt(limit);
 
         // Construir la consulta
-        let query = {};
-        
+        let query = { estado: true }; // Añadimos filtro de productos activos
+
         if (exact === 'true') {
             // Búsqueda exacta: el array de tags debe tener exactamente los mismos elementos
-            const allProducts = await ProductoBase.find();
-            
+            const allProducts = await ProductoBase.find({ estado: true });
+
             const filteredProducts = allProducts.filter(product => {
                 // Verificar si el producto tiene tags
                 if (!product.tags || !Array.isArray(product.tags)) {
                     return false;
                 }
-                
+
                 // Para que sea exacto:
                 // 1. Debe tener la misma cantidad de tags
                 if (product.tags.length !== tagArray.length) {
                     return false;
                 }
-                
+
                 // 2. Todos los tags solicitados deben estar presentes
                 const hasAllTags = tagArray.every(tag => product.tags.includes(tag));
-                
+
                 return hasAllTags;
             }).slice(0, limitNum);
-            
+
             return res.status(200).send({
                 success: true,
                 msg: "Productos con exactamente las mismas etiquetas",
@@ -414,15 +419,15 @@ const findAllProductsByTags = async (req, res) => {
             // Búsqueda normal con $all o $in
             if (matchAll === 'true') {
                 // Todos los tags deben estar presentes (AND)
-                query = { tags: { $all: tagArray } };
+                query.tags = { $all: tagArray };
             } else {
                 // Al menos un tag debe estar presente (OR)
-                query = { tags: { $in: tagArray } };
+                query.tags = { $in: tagArray };
             }
-            
+
             // Ejecutar la consulta sin paginación pero con límite
             const products = await ProductoBase.find(query).limit(limitNum);
-    
+
             res.status(200).send({
                 success: true,
                 msg: matchAll === 'true' ?
@@ -471,7 +476,7 @@ const renameTag = async (req, res) => {
         // Actualizar la etiqueta en cada producto
         const updatePromises = productsToUpdate.map(product => {
             const tagIndex = product.tags.indexOf(oldTag);
-            
+
             if (tagIndex !== -1) {
                 product.tags[tagIndex] = newTag;
                 updatedCount++;

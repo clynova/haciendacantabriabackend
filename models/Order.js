@@ -4,8 +4,15 @@ const orderSchema = new mongoose.Schema(
     {
         userId: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },
         orderDate: { type: Date, default: Date.now },
-        status: { type: String, required: true, enum: ["pending", "completed", "canceled", "finalized"] },
+        status: { 
+            type: String, 
+            required: true, 
+            enum: ["pending", "processing", "completed", "canceled", "finalized"],
+            default: "pending"
+        },
         subtotal: { type: Number, required: true }, // Subtotal solo de productos
+        shippingCost: { type: Number, required: true }, // Costo de envío
+        paymentCommission: { type: Number, required: true }, // Comisión del método de pago
         total: { type: Number, required: true },    // Total con envío y comisiones
         shippingAddress: {
             street: { type: String, required: true, trim: true },
@@ -19,7 +26,8 @@ const orderSchema = new mongoose.Schema(
             additionalInstructions: { type: String, trim: true } // Instrucciones adicionales para la entrega
         },
         paymentMethod: { 
-            type: String,  // Cambiado de ObjectId a String para coincidir con la validación de MongoDB
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "PaymentMethod",
             required: true
         },
         payment: {
@@ -61,9 +69,54 @@ const orderSchema = new mongoose.Schema(
             type: Date,
             required: true
         },
+        quotationId: { 
+            type: mongoose.Schema.Types.ObjectId, 
+            ref: "Quotation",
+            default: null
+        }, // Para órdenes creadas desde cotizaciones
+        notes: { type: String }, // Notas internas o comentarios del admin
+        facturacion: {
+            comprobanteTipo: {
+                type: String,
+                enum: ["boleta", "factura"],
+                default: "boleta"
+            },
+            razonSocial: {
+                type: String,
+                trim: true
+            },
+            rut: {
+                type: String,
+                trim: true
+            },
+            giro: {
+                type: String,
+                trim: true
+            },
+            direccionFacturacion: {
+                type: String,
+                trim: true
+            },
+            status: {
+                type: Boolean,
+                default: false
+            }
+        } // Datos estructurados para facturación
     },
-    { timestamps: true }
+    { 
+        timestamps: true,
+        toJSON: { virtuals: true },
+        toObject: { virtuals: true }
+    }
 );
+
+// Virtual para obtener los detalles de la orden
+orderSchema.virtual('details', {
+    ref: 'OrderDetail',
+    localField: '_id',
+    foreignField: 'orderId',
+    justOne: false
+});
 
 const Order = mongoose.model("Order", orderSchema);
 

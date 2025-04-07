@@ -3,6 +3,10 @@ import { Order } from '../models/Order.js';
 import { User } from '../models/User.js';
 import { Quotation } from '../models/Quotation.js';
 import { OrderDetail } from '../models/OrderDetail.js';
+import { enviarEmailConPDF } from '../controllers/emailController.js';
+import fs from 'fs';
+import { promisify } from 'util';
+import crypto from 'crypto';
 
 const getDashboardStats = async (req, res) => {
     try {
@@ -333,4 +337,141 @@ const getTopProducts = async (req, res) => {
     }
 };
 
-export { getDashboardStats, getTopTags, getTotalSales, getQuotationStats, getOrderStats, getTopProducts };
+/**
+ * Envía un PDF (boleta o factura) por correo electrónico al usuario
+ * @param {Object} req - Request de Express
+ * @param {Object} res - Response de Express
+ */
+const enviarPDFporEmail = async (req, res) => {
+    let tempFilePath = null;
+    
+    try {
+        console.log('Iniciando el envío de PDF por correo electrónico...');
+        
+        // Variables para manejar el PDF
+        let pdfBuffer;
+
+        // Comprobar si el PDF viene como un archivo a través de multer o como base64 en el cuerpo
+        if (req.file) {
+            // Si viene como archivo (vía multer)
+            if (req.file.buffer) {
+                pdfBuffer = req.file.buffer;
+            } else if (req.file.path) {
+                pdfBuffer = await promisify(fs.readFile)(req.file.path);
+                tempFilePath = req.file.path; // Para eliminar después
+            }
+        } else if (req.body.pdfFile && req.body.pdfFile.startsWith('data:application/pdf;base64,')) {
+            // Si viene como base64 en el cuerpo de la solicitud
+            const base64Data = req.body.pdfFile.replace(/^data:application\/pdf;base64,/, '');
+            
+            try {
+                // Intentar decodificar el base64 para asegurar que es válido
+                pdfBuffer = Buffer.from(base64Data, 'base64');
+                
+                // Verificar que el archivo comienza con la firma de PDF "%PDF-"
+                if (!pdfBuffer.slice(0, 5).toString().startsWith('%PDF-')) {
+                    throw new Error('El contenido no es un PDF válido');
+                }
+                
+                // Crear un archivo temporal con nombre seguro usando crypto
+                const randomHash = crypto.randomBytes(16).toString('hex');
+                tempFilePath = `/tmp/doc-${randomHash}.pdf`;
+                await promisify(fs.writeFile)(tempFilePath, pdfBuffer, { mode: 0o600 }); // Permisos restrictivos
+            } catch (error) {
+                console.error('Error procesando PDF base64:', error);
+                return res.status(400).json({
+                    success: false,
+                    msg: 'El contenido base64 proporcionado no es un PDF válido'
+                });
+            }
+        }
+
+        // Verificar que tenemos un buffer de PDF
+        if (!pdfBuffer || pdfBuffer.length === 0) {
+            return res.status(400).json({
+                success: false,
+                msg: 'No se ha proporcionado ningún archivo PDF válido o el archivo está vacío'
+            });
+        }
+
+        // Obtener el email del usuario desde el cuerpo de la solicitud (ya validado por el middleware)
+        const { email, documentType = 'boleta', documentNumber = '' } = req.body;
+
+        // Sanitizar valores de entrada
+        const sanitizedDocType = documentType.toLowerCase() === 'factura' ? 'factura' : 'boleta';
+        const sanitizedDocNumber = documentNumber.replace(/[^a-zA-Z0-9-]/g, ''); // Solo permitir alphanumeric y guión
+
+        // Buscar información del usuario por email
+        const usuario = await User.findOne({ email });
+        
+        if (!usuario) {
+            return res.status(404).json({
+                success: false,
+                msg: 'No se encontró ningún usuario con ese correo electrónico'
+            });
+        }
+
+        // Configurar datos para el envío del email
+        const datosEmail = {
+            email,
+            firstName: usuario.firstName || 'Estimado Cliente',
+            lastName: usuario.lastName || '',
+            pdfBuffer,
+            documentType: sanitizedDocType,
+            documentNumber: sanitizedDocNumber
+        };
+
+        // Enviar el email con el PDF adjunto
+        const resultado = await enviarEmailConPDF(datosEmail);
+
+        if (resultado.success) {
+            return res.status(200).json({
+                success: true,
+                msg: `${sanitizedDocType === 'factura' ? 'Factura' : 'Boleta'} enviada exitosamente por correo electrónico`,
+                data: {
+                    email,
+                    messageId: resultado.messageId
+                }
+            });
+        } else {
+            throw new Error(resultado.error || 'Error al enviar el email');
+        }
+    } catch (error) {
+        console.error('Error en enviarPDFporEmail:', error);
+        
+        return res.status(500).json({
+            success: false,
+            msg: 'Error al enviar el PDF por correo electrónico',
+            error: error.message
+        });
+    } finally {
+        // Eliminar archivos temporales siempre, incluso si hay errores
+        if (tempFilePath) {
+            try {
+                await promisify(fs.unlink)(tempFilePath);
+            } catch (cleanupError) {
+                console.error('Error al eliminar archivo temporal:', cleanupError);
+                // No enviamos el error al cliente, es solo para logging
+            }
+        }
+        
+        // Si hay un archivo de multer, asegurarse de eliminarlo también
+        if (req.file && req.file.path && req.file.path !== tempFilePath) {
+            try {
+                await promisify(fs.unlink)(req.file.path);
+            } catch (cleanupError) {
+                console.error('Error al eliminar archivo de multer:', cleanupError);
+            }
+        }
+    }
+};
+
+export { 
+    getDashboardStats, 
+    getTopTags, 
+    getTotalSales, 
+    getQuotationStats, 
+    getOrderStats, 
+    getTopProducts,
+    enviarPDFporEmail 
+};

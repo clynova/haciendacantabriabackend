@@ -261,17 +261,22 @@ const generarEmailRecuperacionHTML = ({ firstName, token }) => {
 // Función para generar el HTML del email de notificación de producto favorito
 const generarEmailProductoFavoritoHTML = ({ usuario, producto }) => {
   const { firstName } = usuario;
-  const { nombre, descripcion, precios, multimedia, slug } = producto;
+  const { nombre, descripcion, multimedia, slug, opcionesPeso } = producto;
 
   // Obtener la imagen principal del producto o la primera disponible
   const imagen = multimedia?.imagenes?.find(img => img.esPrincipal)?.url ||
     multimedia?.imagenes?.[0]?.url ||
     'https://via.placeholder.com/400x300?text=Producto';
 
-  // Calcular el precio con descuentos
-  const precioBase = precios?.base || 0;
-  const descuento = precios?.descuentos?.regular || 0;
-  const precioFinal = precioBase * (1 - (descuento / 100));
+  // Obtener el precio con variante predeterminada o primera variante
+  let precioFinal = 0;
+  if (opcionesPeso && opcionesPeso.pesosEstandar && opcionesPeso.pesosEstandar.length > 0) {
+    // Buscar la variante predeterminada o usar la primera
+    const variante = opcionesPeso.pesosEstandar.find(v => v.esPredeterminado) || opcionesPeso.pesosEstandar[0];
+    const precioBase = variante.precio || 0;
+    const descuento = variante.descuentos?.regular || 0;
+    precioFinal = precioBase * (1 - (descuento / 100));
+  }
 
   // Crear URL del producto
   const productoUrl = `${process.env.FRONTEND_URL}/product/${slug}`;
@@ -624,7 +629,7 @@ const enviarEmailRecuperacion = async (usuario) => {
 // Función para generar el HTML del email de confirmación de orden de compra
 const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario }) => {
   const { firstName, lastName } = usuario;
-  const { _id, orderDate, status, subtotal, total, shippingAddress, shipping, payment, estimatedDeliveryDate } = order;
+  const { _id, orderDate, status, subtotal, total, shippingAddress, shipping, payment, estimatedDeliveryDate, shippingCost, paymentCommission } = order;
 
   // Formatear fecha de orden
   const fechaOrden = new Date(orderDate).toLocaleDateString('es-ES', {
@@ -643,7 +648,8 @@ const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario 
   // Formatear estado de la orden para mostrarlo en español
   const estadosTraducidos = {
     'pending': 'Pendiente',
-    'completed': 'Completada',
+    'processing': 'En procesamiento',
+    'completed': 'En Curso',
     'canceled': 'Cancelada',
     'finalized': 'Finalizada'
   };
@@ -654,28 +660,31 @@ const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario 
   let productosHTML = '';
 
   for (const item of orderDetails) {
-    const producto = item.productId;
+    // Usar la información capturada del producto al momento de la compra
     const cantidad = item.quantity;
-    const precio = item.price;
-    const total = (precio * cantidad).toFixed(2);
-
-    // Obtener imagen del producto si está disponible
-    const imagenUrl = producto.multimedia?.imagenes?.find(img => img.esPrincipal)?.url ||
-      producto.multimedia?.imagenes?.[0]?.url ||
-      'https://via.placeholder.com/80x80?text=Producto';
+    const precio = item.priceInfo.finalPrice;
+    const subtotalItem = item.subtotal;
+    const nombre = item.productSnapshot.nombre;
+    const descripcion = "";
+    
+    // Usar la información de variante
+    const variante = `${item.variant.peso} ${item.variant.unidad}`;
+    
+    // Usar la imagen del snapshot si está disponible
+    const imagenUrl = item.productSnapshot.imagen || 'https://via.placeholder.com/80x80?text=Producto';
 
     productosHTML += `
       <tr>
         <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
-          <img src="${imagenUrl}" alt="${producto.nombre}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
+          <img src="${imagenUrl}" alt="${nombre}" style="width: 80px; height: 80px; object-fit: cover; border-radius: 4px;">
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #e0e0e0;">
-          <div style="font-weight: bold;">${producto.nombre}</div>
-          <div style="color: #666; font-size: 14px; margin-top: 4px;">${producto.descripcion?.corta || ''}</div>
+          <div style="font-weight: bold;">${nombre}</div>
+          <div style="color: #666; font-size: 14px; margin-top: 4px;">${variante}</div>
         </td>
         <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: center;">${cantidad}</td>
         <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: right;">$${precio.toFixed(2)}</td>
-        <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: right;">$${total}</td>
+        <td style="padding: 10px; border-bottom: 1px solid #e0e0e0; text-align: right;">$${subtotalItem.toFixed(2)}</td>
       </tr>
     `;
   }
@@ -833,6 +842,11 @@ const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario 
           background-color: #ffe0b2;
           color: #e65100;
         }
+
+        .status-processing {
+          background-color: #e3f2fd;
+          color: #0d47a1;
+        }
         
         .status-completed {
           background-color: #c8e6c9;
@@ -973,7 +987,11 @@ const generarEmailConfirmacionOrdenHTML = async ({ order, orderDetails, usuario 
               </div>
               <div class="summary-row">
                 <div>Envío:</div>
-                <div>$${shipping.cost.toFixed(2)}</div>
+                <div>$${shippingCost.toFixed(2)}</div>
+              </div>
+              <div class="summary-row">
+                <div>Comisión de pago:</div>
+                <div>$${paymentCommission.toFixed(2)}</div>
               </div>
               <div class="summary-row total">
                 <div>Total:</div>
@@ -1055,11 +1073,7 @@ const enviarEmailConfirmacionOrden = async (orderIdOrReq, res = null) => {
     }
 
     // Obtener los detalles de la orden (productos)
-    const orderDetails = await OrderDetail.find({ orderId })
-      .populate({
-        path: 'productId',
-        model: 'Producto'
-      });
+    const orderDetails = await OrderDetail.find({ orderId });
 
     // Obtener la información del usuario
     const usuario = await User.findById(order.userId);
@@ -1147,7 +1161,6 @@ const enviarEmailConfirmacionOrden = async (orderIdOrReq, res = null) => {
  */
 const enviarEmailConfirmacionOrdenDirecta = async (orderId, res = null) => {
   try {
-
     if (!orderId) {
       const error = new Error('ID de orden no proporcionado');
       if (res) {
@@ -1180,11 +1193,7 @@ const enviarEmailConfirmacionOrdenDirecta = async (orderId, res = null) => {
     }
 
     // Obtener los detalles de la orden (productos)
-    const orderDetails = await OrderDetail.find({ orderId })
-      .populate({
-        path: 'productId',
-        model: 'Producto'
-      });
+    const orderDetails = await OrderDetail.find({ orderId });
 
     // Obtener la información del usuario
     const usuario = await User.findById(order.userId);
@@ -1197,14 +1206,6 @@ const enviarEmailConfirmacionOrdenDirecta = async (orderId, res = null) => {
         });
       }
       throw error;
-    }
-
-    // Si es una solicitud HTTP, verificar que el usuario tenga permiso
-    if (res && orderIdOrReq.user && orderIdOrReq.user._id.toString() !== usuario._id.toString() && !orderIdOrReq.user.roles.includes('admin')) {
-      return res.status(403).json({
-        success: false,
-        error: 'No tienes permiso para acceder a esta orden'
-      });
     }
 
     // Configurar el transportador de email
@@ -1258,7 +1259,162 @@ const enviarEmailConfirmacionOrdenDirecta = async (orderId, res = null) => {
     return {
       success: false,
       error: error.message,
-      orderId: typeof orderIdOrReq === 'string' ? orderIdOrReq : orderIdOrReq.params?.orderId
+      orderId
+    };
+  }
+};
+
+/**
+ * Envía un email con un archivo PDF adjunto (boleta o factura)
+ * @param {Object} datos - Datos necesarios para el envío
+ * @param {string} datos.email - Correo electrónico del destinatario
+ * @param {string} datos.firstName - Nombre del destinatario
+ * @param {string} datos.lastName - Apellido del destinatario (opcional)
+ * @param {Buffer|string} datos.pdfBuffer - Buffer del PDF o ruta al archivo temporal
+ * @param {string} datos.documentType - Tipo de documento (boleta/factura)
+ * @param {string} datos.documentNumber - Número de documento (opcional)
+ * @returns {Promise<Object>} - Resultado del envío del email
+ */
+const enviarEmailConPDF = async (datos) => {
+  try {
+    const { email, firstName, lastName = '', pdfBuffer, documentType, documentNumber = '' } = datos;
+    
+    if (!email || !pdfBuffer) {
+      throw new Error('Email del destinatario y archivo PDF son requeridos');
+    }
+
+    const transporter = createTransporter();
+    
+    // Determinar el tipo de documento para el asunto y contenido
+    const tipoDocumento = documentType.toLowerCase() === 'factura' ? 'factura' : 'boleta';
+    const documentoMayuscula = tipoDocumento.charAt(0).toUpperCase() + tipoDocumento.slice(1);
+    
+    // Configurar número de documento para mostrar si está disponible
+    const numeroDocumento = documentNumber ? ` #${documentNumber}` : '';
+    
+    // Generar el contenido HTML del email
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>${documentoMayuscula}${numeroDocumento} - Hacienda Cantabria</title>
+        <style>
+          body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+            color: #333;
+            line-height: 1.6;
+          }
+          .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+          }
+          .header {
+            background-color: #2C3E50;
+            padding: 30px 20px;
+            text-align: center;
+          }
+          .header-text {
+            font-size: 24px;
+            font-weight: 700;
+            color: #ffffff;
+            margin: 0;
+            letter-spacing: 0.5px;
+          }
+          .content {
+            padding: 30px 20px;
+          }
+          .greeting {
+            font-size: 18px;
+            margin-bottom: 20px;
+          }
+          .footer {
+            background-color: #f5f5f5;
+            padding: 20px;
+            text-align: center;
+            font-size: 14px;
+            color: #999;
+          }
+          @media only screen and (max-width: 480px) {
+            .container {
+              width: 100%;
+              border-radius: 0;
+            }
+            .content {
+              padding: 20px 15px;
+            }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1 class="header-text">Tu ${documentoMayuscula}${numeroDocumento}</h1>
+          </div>
+          
+          <div class="content">
+            <p class="greeting">Hola ${firstName} ${lastName},</p>
+            <p>
+              Tu ${tipoDocumento}${numeroDocumento} ha sido generada exitosamente. 
+              Puedes encontrarla adjunta en este correo.
+            </p>
+            <p>
+              Cualquier consulta, no dudes en contactarnos respondiendo a este correo
+              o a través de nuestros canales de atención al cliente.
+            </p>
+            <p>
+              Gracias por confiar en Hacienda Cantabria.
+            </p>
+          </div>
+          
+          <div class="footer">
+            <p>Hacienda Cantabria - ${new Date().getFullYear()}</p>
+            <p>Todos los derechos reservados</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    // Configurar opciones del email
+    const mailOptions = {
+      from: `"Hacienda Cantabria" <${process.env.EMAIL_FROM}>`,
+      to: email,
+      subject: `Tu ${documentoMayuscula}${numeroDocumento} de Hacienda Cantabria`,
+      html: htmlContent,
+      attachments: [{
+        filename: `${documentoMayuscula}${numeroDocumento}.pdf`,
+        content: pdfBuffer,
+        contentType: 'application/pdf'
+      }]
+    };
+
+    // Enviar el email
+    const info = await transporter.sendMail(mailOptions);
+
+    console.log(`Email con ${tipoDocumento} enviado a ${email}:`, {
+      messageId: info.messageId,
+      response: info.response
+    });
+
+    return {
+      success: true,
+      messageId: info.messageId,
+      email
+    };
+  } catch (error) {
+    console.error('Error al enviar email con PDF adjunto:', error);
+    return {
+      success: false,
+      error: error.message
     };
   }
 };
@@ -1270,5 +1426,6 @@ export {
   generarEmailProductoFavoritoHTML,
   enviarEmailProductoFavorito,
   enviarEmailConfirmacionOrden,
-  enviarEmailConfirmacionOrdenDirecta
+  enviarEmailConfirmacionOrdenDirecta,
+  enviarEmailConPDF
 };

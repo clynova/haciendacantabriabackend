@@ -50,32 +50,69 @@ const createQuotation = async (req, res) => {
         let subtotal = 0;
         let totalWeight = 0;
 
+        // Validar productos y calcular subtotal
         for (const item of cart.products) {
             const producto = await ProductoBase.findById(item.productId);
             if (!producto) {
                 return res.status(404).json({ success: false, msg: `Producto no encontrado: ${item.productId}` });
             }
 
-            // Calcular precio según el tipo de producto
-            let precioUnitario = producto.precios.base;
-            
-            // Aplicar descuentos si hay
-            if (producto.precios.descuentos && producto.precios.descuentos.regular > 0) {
-                const descuento = producto.precios.descuentos.regular / 100;
-                precioUnitario = precioUnitario * (1 - descuento);
+            // Verificar que el producto esté disponible
+            if (!producto.estado) {
+                return res.status(400).json({ 
+                    success: false, 
+                    msg: `El producto ${producto.nombre} no está disponible` 
+                });
             }
-            
-            subtotal += precioUnitario * item.quantity;
 
-            // Calcular peso total si el producto tiene peso
-            if (producto.tipoProducto === 'ProductoCarne' && producto.opcionesPeso && producto.opcionesPeso.pesoPromedio) {
-                totalWeight += (producto.opcionesPeso.pesoPromedio / 1000) * item.quantity;
+            // Verificar la variante seleccionada
+            if (!item.variant || !item.variant.pesoId) {
+                return res.status(400).json({ 
+                    success: false, 
+                    msg: `Información de variante incompleta para el producto: ${producto.nombre}` 
+                });
+            }
+
+            const selectedVariant = producto.opcionesPeso.pesosEstandar.find(
+                v => v._id.toString() === item.variant.pesoId.toString()
+            );
+
+            if (!selectedVariant) {
+                return res.status(404).json({ 
+                    success: false, 
+                    msg: `Variante de peso no encontrada para el producto: ${producto.nombre}` 
+                });
+            }
+
+            // Verificar stock
+            if (selectedVariant.stockDisponible < item.quantity) {
+                return res.status(400).json({
+                    success: false,
+                    msg: `Stock insuficiente para ${producto.nombre} (${selectedVariant.peso} ${selectedVariant.unidad}). Disponible: ${selectedVariant.stockDisponible}, Solicitado: ${item.quantity}`
+                });
+            }
+
+            // Calcular precio
+            const basePrice = selectedVariant.precio;
+            const discountPercentage = selectedVariant.descuentos?.regular || 0;
+            const finalPrice = basePrice * (1 - (discountPercentage / 100));
+            
+            // Acumular al subtotal
+            const itemSubtotal = finalPrice * item.quantity;
+            subtotal += itemSubtotal;
+
+            // Calcular peso total
+            if (selectedVariant.unidad === 'g') {
+                // Convertir a kg si está en gramos
+                totalWeight += (selectedVariant.peso / 1000) * item.quantity;
+            } else if (selectedVariant.unidad === 'kg') {
+                totalWeight += selectedVariant.peso * item.quantity;
             }
         }
 
         // Calcular el costo de envío
-        let shippingCost = selectedMethod.base_cost;
-        if (totalWeight > 0) {
+        let shippingCost = selectedMethod.base_cost || 0;
+        if (totalWeight > 0 && selectedMethod.extra_cost_per_kg) {
             shippingCost += (totalWeight * selectedMethod.extra_cost_per_kg);
         }
 
@@ -105,7 +142,7 @@ const createQuotation = async (req, res) => {
                 zipCode: shippingAddress.zipCode,
                 reference: shippingAddress.reference || '',
                 phoneContact: phoneContact || '',
-                recipientName: recipientName || shippingAddress.recipientName || user.firstName + ' ' + user.lastName,
+                recipientName: recipientName || shippingAddress.recipientName || `${user.firstName} ${user.lastName}`,
                 additionalInstructions: additionalInstructions || ''
             },
             shipping: {
@@ -121,24 +158,34 @@ const createQuotation = async (req, res) => {
         // Guardar los detalles de la cotización
         for (const item of cart.products) {
             const producto = await ProductoBase.findById(item.productId);
-            let precioUnitario = producto.precios.base;
             
-            if (producto.precios.descuentos && producto.precios.descuentos.regular > 0) {
-                const descuento = producto.precios.descuentos.regular / 100;
-                precioUnitario = precioUnitario * (1 - descuento);
-            }
+            // Obtener la variante seleccionada
+            const selectedVariant = producto.opcionesPeso.pesosEstandar.find(
+                v => v._id.toString() === item.variant.pesoId.toString()
+            );
+            
+            // Calcular precio final con descuento
+            const basePrice = selectedVariant.precio;
+            const discountPercentage = selectedVariant.descuentos?.regular || 0;
+            const finalPrice = basePrice * (1 - (discountPercentage / 100));
             
             const quotationDetail = new QuotationDetail({
                 quotationId: quotation._id,
                 productId: item.productId,
                 quantity: item.quantity,
-                price: precioUnitario
+                price: finalPrice,
+                variant: {
+                    pesoId: selectedVariant._id,
+                    peso: selectedVariant.peso,
+                    unidad: selectedVariant.unidad,
+                    precio: basePrice,
+                    sku: selectedVariant.sku || ''
+                }
             });
+            
             await quotationDetail.save();
         }
 
-
-        console.log(cart)
         // Vaciar el carrito del usuario
         await Cart.findByIdAndDelete(cart._id);
 
@@ -203,7 +250,8 @@ const getQuotation = async (req, res) => {
             products: quotationDetails.map(detail => ({
                 product: detail.productId,
                 quantity: detail.quantity,
-                price: detail.price
+                price: detail.price,
+                variant: detail.variant
             }))
         };
         
@@ -312,7 +360,8 @@ const getUserQuotations = async (req, res) => {
                     products: quotationDetails.map(detail => ({
                         product: detail.productId,
                         quantity: detail.quantity,
-                        price: detail.price
+                        price: detail.price,
+                        variant: detail.variant
                     }))
                 };
             })
@@ -348,7 +397,8 @@ const getAllQuotations = async (req, res) => {
                     products: quotationDetails.map(detail => ({
                         product: detail.productId,
                         quantity: detail.quantity,
-                        price: detail.price
+                        price: detail.price,
+                        variant: detail.variant
                     }))
                 };
             })

@@ -72,21 +72,6 @@ const EsquemaProductoBase = new Schema({
             type: String
         }
     },
-    precios: {
-        base: {
-            type: Number,
-            required: true,
-            min: 0
-        },
-        descuentos: {
-            regular: {
-                type: Number,
-                default: 0,
-                min: 0,
-                max: 100
-            }
-        }
-    },
     multimedia: {
         imagenes: [{
             url: {
@@ -130,19 +115,65 @@ const EsquemaProductoBase = new Schema({
         type: Map,
         of: Schema.Types.Mixed
     },
-    inventario: {
-        stockUnidades: {
-            type: Number,
-            min: 0
+    opcionesPeso: {
+        esPesoVariable: {
+            type: Boolean,
+            default: true
         },
-        umbralStockBajo: {
-            type: Number,
-            default: 5
-        },
-        ultimaActualizacion: {
-            type: Date,
-            default: Date.now
-        }
+        pesoPromedio: Number,
+        pesoMinimo: Number,
+        pesoMaximo: Number,
+        pesosEstandar: [{
+            peso: Number,
+            unidad: {
+                type: String,
+                enum: ['g', 'kg', 'ml', 'L', 'unidades'],
+                default: 'g'
+            },
+            esPredeterminado: {
+                type: Boolean,
+                default: false
+            },
+            precio: Number,
+            sku: String,
+            stockDisponible: {
+                type: Number,
+                min: 0,
+                default: 0
+            }, // Stock específico para esta variante
+            umbralStockBajo: {
+                type: Number,
+                default: 5
+            }, // Umbral de stock bajo para esta variante
+            descuentos: {
+                regular: {
+                    type: Number,
+                    default: 0,
+                    min: 0,
+                    max: 100
+                }
+            },
+            ultimaActualizacion: {
+                type: Date,
+                default: Date.now
+            } // Última actualización del stock
+        }],
+        rangosPreferidos: [{
+            nombre: String,
+            pesoMinimo: {
+                type: Number,
+                required: true
+            },
+            pesoMaximo: {
+                type: Number,
+                required: true
+            },
+            descripcion: String,
+            esPredeterminado: {
+                type: Boolean,
+                default: false
+            }
+        }]
     },
     tags: [{ type: String, trim: true }],
     fechaCreacion: { type: Date, default: Date.now },
@@ -208,45 +239,6 @@ const EsquemaProductoCarne = new Schema({
             descripcion: String
         }]
     },
-    opcionesPeso: {
-        esPesoVariable: {
-            type: Boolean,
-            default: true
-        },
-        pesoPromedio: Number,
-        pesoMinimo: Number,
-        pesoMaximo: Number,
-        pesosEstandar: [{
-            peso: Number,
-            unidad: {
-                type: String,
-                enum: ['g', 'kg'],
-                default: 'g'
-            },
-            esPredeterminado: {
-                type: Boolean,
-                default: false
-            },
-            precio: Number,
-            sku: String
-        }],
-        rangosPreferidos: [{
-            nombre: String,
-            pesoMinimo: {
-                type: Number,
-                required: true
-            },
-            pesoMaximo: {
-                type: Number,
-                required: true
-            },
-            descripcion: String,
-            esPredeterminado: {
-                type: Boolean,
-                default: false
-            }
-        }]
-    },
     empaque: {
         tipo: {
             type: String,
@@ -280,10 +272,6 @@ const EsquemaProductoAceite = new Schema({
             enum: TipoAceite,
             required: true
         },
-        volumen: {
-            type: Number,
-            required: true
-        },
         envase: {
             type: String,
             enum: TipoEnvase
@@ -310,43 +298,60 @@ const EsquemaProductoAceite = new Schema({
         temperatura: String,
         fechaEnvasado: Date,
         fechaVencimiento: Date
-    },
-    opcionesVolumen: [{
-        volumen: Number,
-        esPredeterminado: {
-            type: Boolean,
-            default: false
-        },
-        precio: Number,
-        sku: String
-    }]
+    }
 });
 
 // Virtuals
-EsquemaProductoBase.virtual('precioFinal').get(function () {
-    const precioBase = this.precios.base;
-    const descuentoRegular = this.precios.descuentos.regular || 0;
-    return precioBase * (1 - (descuentoRegular / 100));
+EsquemaProductoBase.virtual('precioVariantesPorPeso').get(function() {
+    if (!this.opcionesPeso || !this.opcionesPeso.pesosEstandar || this.opcionesPeso.pesosEstandar.length === 0) {
+        return [];
+    }
+    
+    return this.opcionesPeso.pesosEstandar.map(variante => {
+        const precio = variante.precio;
+        const descuento = variante.descuentos?.regular || 0;
+        const precioFinal = precio * (1 - (descuento / 100));
+        
+        return {
+            pesoId: variante._id,
+            peso: variante.peso,
+            unidad: variante.unidad,
+            precio: precio,
+            descuento: descuento,
+            precioFinal: precioFinal,
+            stockDisponible: variante.stockDisponible,
+            esPredeterminado: variante.esPredeterminado,
+            sku: variante.sku
+        };
+    });
 });
 
-EsquemaProductoBase.virtual('precioTransferencia').get(function () {
-    const precioBase = this.precios.base;
-    const descuentoRegular = this.precios.descuentos.regular || 0;
-    const descuentoTransferencia = this.precios.descuentos.transferencia || 0;
-    return precioBase * (1 - ((descuentoRegular + descuentoTransferencia) / 100));
-});
-
-EsquemaProductoCarne.virtual('precioPorKgFinal').get(function () {
-    const precioPorKg = this.infoCarne.precioPorKg;
-    const descuentoRegular = this.precios.descuentos.regular || 0;
-    return precioPorKg * (1 - (descuentoRegular / 100));
-});
-
-EsquemaProductoCarne.virtual('precioPorKgTransferencia').get(function () {
-    const precioPorKg = this.infoCarne.precioPorKg;
-    const descuentoRegular = this.precios.descuentos.regular || 0;
-    const descuentoTransferencia = this.precios.descuentos.transferencia || 0;
-    return precioPorKg * (1 - ((descuentoRegular + descuentoTransferencia) / 100));
+EsquemaProductoBase.virtual('variantePredeterminada').get(function() {
+    if (!this.opcionesPeso || !this.opcionesPeso.pesosEstandar || this.opcionesPeso.pesosEstandar.length === 0) {
+        return null;
+    }
+    
+    // Buscar una variante predeterminada
+    const predeterminada = this.opcionesPeso.pesosEstandar.find(v => v.esPredeterminado);
+    
+    // Si no hay predeterminada, usar la primera
+    const variante = predeterminada || this.opcionesPeso.pesosEstandar[0];
+    
+    const precio = variante.precio;
+    const descuento = variante.descuentos?.regular || 0;
+    const precioFinal = precio * (1 - (descuento / 100));
+    
+    return {
+        pesoId: variante._id,
+        peso: variante.peso,
+        unidad: variante.unidad,
+        precio: precio,
+        descuento: descuento,
+        precioFinal: precioFinal,
+        stockDisponible: variante.stockDisponible,
+        esPredeterminado: variante.esPredeterminado,
+        sku: variante.sku
+    };
 });
 
 // Middleware
