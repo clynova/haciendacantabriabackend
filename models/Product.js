@@ -23,7 +23,7 @@ const CorteVacuno = [
     'PUNTA_DE_GANSO', 'ABASTERO', 'TAPABARRIGA',
 
     // Adicionales para carne molida
-    'MOLIDA_ESPECIAL', 'MOLIDA_CORRIENTE'
+    'MOLIDA_ESPECIAL', 'MOLIDA_CORRIENTE', 'HAMBURGUESA','BLEND'
 ];
 
 const TipoAceite = ['MARAVILLA', 'OLIVA', 'CANOLA', 'MIXTO'];
