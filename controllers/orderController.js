@@ -26,8 +26,7 @@ const createOrder = async (req, res) => {
             recipientName, 
             phoneContact, 
             additionalInstructions,
-            comprobanteTipo,
-            rut
+            facturacion
         } = req.body;
 
         // Obtener el usuario con sus direcciones
@@ -209,8 +208,13 @@ const createOrder = async (req, res) => {
                 trackingNumber: null
             },
             estimatedDeliveryDate,
-            comprobanteTipo: comprobanteTipo || 'boleta', // Por defecto es boleta si no se especifica
-            rut: rut || null // RUT opcional
+            facturacion: {
+                comprobanteTipo: facturacion?.comprobanteTipo || 'boleta',
+                razonSocial: facturacion?.razonSocial || null,
+                rut: facturacion?.rut || null,
+                giro: facturacion?.giro || null,
+                direccionFacturacion: facturacion?.direccionFacturacion || null
+            }
         });
 
         // Guardar la orden
@@ -518,8 +522,23 @@ const updateOrder = async (req, res) => {
         // Actualizar campos básicos si se proporcionan
         if (req.body.status) order.status = req.body.status;
         if (req.body.notes) order.notes = req.body.notes;
-        if (req.body.comprobanteTipo) order.comprobanteTipo = req.body.comprobanteTipo;
-        if (req.body.rut) order.rut = req.body.rut;
+        
+        // Actualizar facturación si se proporciona
+        if (req.body.facturacion) {
+            if (req.body.facturacion.comprobanteTipo) order.facturacion.comprobanteTipo = req.body.facturacion.comprobanteTipo;
+            if (req.body.facturacion.razonSocial) order.facturacion.razonSocial = req.body.facturacion.razonSocial;
+            if (req.body.facturacion.rut) order.facturacion.rut = req.body.facturacion.rut;
+            if (req.body.facturacion.giro) order.facturacion.giro = req.body.facturacion.giro;
+            if (req.body.facturacion.direccionFacturacion) order.facturacion.direccionFacturacion = req.body.facturacion.direccionFacturacion;
+        }
+        
+        // Para mantener compatibilidad con código anterior
+        if (req.body.comprobanteTipo && !req.body.facturacion) {
+            order.facturacion.comprobanteTipo = req.body.comprobanteTipo;
+        }
+        if (req.body.rut && !req.body.facturacion) {
+            order.facturacion.rut = req.body.rut;
+        }
 
         // Si se está actualizando el transportista y el método de envío
         if (req.body.shipping) {
@@ -657,7 +676,11 @@ const createOrderFromQuotation = async (req, res) => {
         }
 
         const userId = req.user._id;
-        const { quotationId, paymentMethodId, comprobanteTipo, rut } = req.body;
+        const { quotationId, paymentMethodId, facturacion } = req.body;
+        
+        // Para compatibilidad con código anterior
+        const comprobanteTipo = req.body.comprobanteTipo;
+        const rut = req.body.rut;
 
         // Obtener y validar la cotización
         const quotation = await Quotation.findById(quotationId)
@@ -772,8 +795,13 @@ const createOrderFromQuotation = async (req, res) => {
             },
             estimatedDeliveryDate: estimatedDeliveryDate,
             quotationId: quotation._id,
-            comprobanteTipo: comprobanteTipo || 'boleta', // Por defecto es boleta si no se especifica
-            rut: rut || null // RUT opcional
+            facturacion: {
+                comprobanteTipo: facturacion?.comprobanteTipo || comprobanteTipo || 'boleta',
+                razonSocial: facturacion?.razonSocial || null,
+                rut: facturacion?.rut || rut || null,
+                giro: facturacion?.giro || null,
+                direccionFacturacion: facturacion?.direccionFacturacion || null
+            }
         });
 
         await order.save();
