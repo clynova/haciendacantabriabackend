@@ -8,6 +8,7 @@ import fs from 'fs';
 import { promisify } from 'util';
 import crypto from 'crypto';
 
+
 const getDashboardStats = async (req, res) => {
     try {
         // Obtener el conteo total de productos
@@ -395,7 +396,7 @@ const enviarPDFporEmail = async (req, res) => {
         }
 
         // Obtener el email del usuario desde el cuerpo de la solicitud (ya validado por el middleware)
-        const { email, documentType = 'boleta', documentNumber = '' } = req.body;
+        const { email, documentType = 'boleta', documentNumber = '', orderId } = req.body;
 
         // Sanitizar valores de entrada
         const sanitizedDocType = documentType.toLowerCase() === 'factura' ? 'factura' : 'boleta';
@@ -423,8 +424,14 @@ const enviarPDFporEmail = async (req, res) => {
 
         // Enviar el email con el PDF adjunto
         const resultado = await enviarEmailConPDF(datosEmail);
-
         if (resultado.success) {
+
+            const resultOrder = await Order.findById(orderId);
+            if (resultOrder) {
+                resultOrder.facturacion.status = true;
+                await resultOrder.save();
+            }
+
             return res.status(200).json({
                 success: true,
                 msg: `${sanitizedDocType === 'factura' ? 'Factura' : 'Boleta'} enviada exitosamente por correo electrónico`,
