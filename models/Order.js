@@ -75,15 +75,29 @@ const orderSchema = new mongoose.Schema(
             default: null
         }, // Para órdenes creadas desde cotizaciones
         notes: { type: String }, // Notas internas o comentarios del admin
-        comprobanteTipo: {
-            type: String,
-            enum: ["boleta", "factura"],
-            default: "boleta"
-        }, // Tipo de comprobante (boleta o factura)
-        rut: {
-            type: String,
-            trim: true
-        } // RUT del usuario o empresa para facturación (opcional)
+        facturacion: {
+            comprobanteTipo: {
+                type: String,
+                enum: ["boleta", "factura"],
+                default: "boleta"
+            },
+            razonSocial: {
+                type: String,
+                trim: true
+            },
+            rut: {
+                type: String,
+                trim: true
+            },
+            giro: {
+                type: String,
+                trim: true
+            },
+            direccionFacturacion: {
+                type: String,
+                trim: true
+            }
+        } // Datos estructurados para facturación
     },
     { 
         timestamps: true,
