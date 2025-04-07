@@ -45,12 +45,13 @@ app.use(cors({
       'https://haciendacantabriafrontend.vercel.app/',]
     : 'http://localhost:5173',
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
   credentials: true
 }));
 
 // Sanitización de datos
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(express.json({ limit: '5mb' }));
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Ruta principal
 app.get('/', async (req, res) => {
