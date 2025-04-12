@@ -12,6 +12,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import cookieParser from 'cookie-parser';
 import session from 'express-session';
+import MongoStore from 'connect-mongo';
 import csrf from 'csurf';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -65,8 +66,19 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
-  }
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000 // 1 día
+  },
+  // Usar MongoDB para almacenar sesiones
+  store: MongoStore.create({
+    mongoUrl: process.env.MONGODB_URI,
+    collectionName: 'sessions',
+    ttl: 24 * 60 * 60, // 1 día en segundos
+    autoRemove: 'native', // Usar TTL index de MongoDB
+    crypto: {
+      secret: process.env.SESSION_SECRET || 'haciendacantabria-secret'
+    }
+  })
 }));
 
 // Configuración de protección CSRF
