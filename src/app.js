@@ -23,6 +23,9 @@ validateEnv();
 
 const app = express();
 
+// Log NODE_ENV for debugging
+console.log('NODE_ENV check:', process.env.NODE_ENV);
+
 // Configuración de confianza para proxy
 app.set('trust proxy', true);
 
@@ -39,17 +42,16 @@ app.use(morgan('combined'));
 app.use(compression());
 
 // Configuración de CORS
-console.log('NODE_ENV:', process.env.NODE_ENV);
 app.use(cors({
   origin: function(origin, callback) {
-    if (!origin) return callback(null, true);
+    if (!origin) return callback(null, true); // Allow requests with no origin
     const allowedOrigins = process.env.NODE_ENV === 'production'
       ? ['https://shop.cohesaspa.com', 'https://haciendacantabriafrontend.vercel.app']
       : ['http://localhost:5173', 'http://localhost:4173'];
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
-      console.warn(`Origen no permitido: ${origin}`);
+      console.warn(`Origen no permitido por CORS: ${origin}`);
       callback(new Error('Origen no permitido por CORS'), false);
     }
   },
@@ -70,9 +72,9 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
+    // Usar configuración dinámica basada en NODE_ENV
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    // Usar capitalización correcta para sameSite
     sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
     maxAge: 24 * 60 * 60 * 1000
   },
@@ -88,24 +90,18 @@ app.use(session({
 }));
 
 // Configuración de protección CSRF
-export const csrfProtection = csrf({
-  cookie: {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: true,
-    // Usar capitalización correcta para sameSite
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
-  }
-});
+// Quitar la opción 'cookie' para que use req.session
+export const csrfProtection = csrf();
 
 // Ruta para obtener el token CSRF
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const csrfToken = req.csrfToken();
   console.log('Generando token CSRF:', csrfToken);
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  // La cookie XSRF-TOKEN aún necesita configuración explícita para cross-site
   res.cookie('XSRF-TOKEN', csrfToken, {
     secure: process.env.NODE_ENV === 'production',
-    httpOnly: false, // Debe ser false para que el cliente lo lea
-    // Usar capitalización correcta para sameSite
+    httpOnly: false, // Client script needs to read this
     sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
   });
   res.json({ success: true });
@@ -128,12 +124,21 @@ app.get('/', async (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error('Error capturado:', err);
-  // Asegúrate de que el middleware CSRF maneje sus propios errores específicos
   if (err.code === 'EBADCSRFTOKEN') {
     console.error('CSRF Token Error:', err);
     res.status(403).json({ message: 'Invalid CSRF token' });
   } else {
-    errorHandler(err, req, res, next);
+    // Devolver el error genérico si no es manejado por el errorHandler
+    if (!res.headersSent) {
+        res.status(err.status || 500).json({ 
+            status: 'error', 
+            message: err.message || 'Something went wrong' 
+        });
+    } else {
+        next(err); // Si ya se enviaron headers, delegar al manejador por defecto de Express
+    }
+    // Considera si quieres llamar a errorHandler aquí también o si el json anterior es suficiente
+    // errorHandler(err, req, res, next);
   }
 });
 
