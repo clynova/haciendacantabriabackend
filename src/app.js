@@ -49,7 +49,7 @@ app.use(cors({
       'https://haciendacantabriafrontend.vercel.app/']
     : ['http://localhost:5173', 'http://localhost:4173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token', 'X-CSRF-Token', 'x-xsrf-token', 'X-XSRF-Token', 'xsrf-token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token', 'X-CSRF-Token', 'x-xsrf-token', 'X-XSRF-Token', 'xsrf-token', '_csrf'],
   credentials: true
 }));
 
