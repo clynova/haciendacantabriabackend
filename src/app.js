@@ -76,6 +76,7 @@ app.use(session({
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    path: '/', // Asegurar que la cookie de sesión también use path raíz
     maxAge: 24 * 60 * 60 * 1000
   },
   store: MongoStore.create({
@@ -102,7 +103,8 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.cookie('XSRF-TOKEN', csrfToken, {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: false, // Client script needs to read this
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
+    path: '/' // <-- AÑADIDO: Hace la cookie accesible desde cualquier ruta
   });
   res.json({ success: true });
 });
