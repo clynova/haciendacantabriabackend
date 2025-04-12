@@ -42,30 +42,21 @@ app.use(compression());
 console.log('NODE_ENV:', process.env.NODE_ENV);
 app.use(cors({
   origin: function(origin, callback) {
-    // Permitir solicitudes sin origen (como aplicaciones móviles o curl)
     if (!origin) return callback(null, true);
-    
     const allowedOrigins = process.env.NODE_ENV === 'production'
-      ? [
-        'https://shop.cohesaspa.com',
-        'https://haciendacantabriafrontend.vercel.app',
-        'http://localhost:5173'
-      ]
+      ? ['https://shop.cohesaspa.com', 'https://haciendacantabriafrontend.vercel.app']
       : ['http://localhost:5173', 'http://localhost:4173'];
-    
-    // Verificar si el origen está permitido
-    if (allowedOrigins.includes(origin) || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       console.warn(`Origen no permitido: ${origin}`);
-      // Si aun estás en desarrollo, puedes permitir todos los orígenes temporalmente
-      callback(null, true); // Cambia a false para rechazar orígenes no permitidos en producción
+      callback(new Error('Origen no permitido por CORS'), false);
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-TOKEN'],
   credentials: true,
-  maxAge: 86400 // 24 horas de caché para las respuestas preflight
+  maxAge: 86400
 }));
 
 // Sanitización de datos
@@ -79,15 +70,15 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: true, // Solo funciona con HTTPS
+    secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'none', // Necesario para cross-origin
-    maxAge: 24 * 60 * 60 * 1000 // 1 día
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 24 * 60 * 60 * 1000
   },
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
     collectionName: 'sessions',
-    ttl: 24 * 60 * 60, // 1 día en segundos
+    ttl: 24 * 60 * 60,
     autoRemove: 'native',
     crypto: {
       secret: process.env.SESSION_SECRET || 'haciendacantabria-secret'
@@ -100,17 +91,19 @@ export const csrfProtection = csrf({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'none', // Necesario para cross-origin
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 });
 
 // Ruta para obtener el token CSRF
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  const csrfToken = req.csrfToken();
+  console.log('Generando token CSRF:', csrfToken);
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  res.cookie('XSRF-TOKEN', req.csrfToken(), {
+  res.cookie('XSRF-TOKEN', csrfToken, {
     secure: process.env.NODE_ENV === 'production',
-    httpOnly: false, // Debe ser accesible desde el frontend
-    sameSite: 'none'
+    httpOnly: false,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   });
   res.json({ success: true });
 });
@@ -131,6 +124,7 @@ app.get('/', async (req, res) => {
 });
 
 app.use((err, req, res, next) => {
+  console.error('Error capturado:', err);
   errorHandler(err, req, res, next);
 });
 
