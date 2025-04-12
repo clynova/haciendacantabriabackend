@@ -26,18 +26,18 @@ import { csrfProtection } from './src/app.js';
 // NOTA: Se ha desactivado temporalmente la protección CSRF para permitir que la aplicación funcione
 // TODO: Reactivar la protección CSRF una vez que se solucionen los problemas de integración
 
-// Rutas de autenticación y registro de usuarios (sin CSRF temporalmente)
-app.use('/api/user', csrfProtection, userRoutes);
+// Rutas de autenticación y registro de usuarios
+app.use('/api/user', userRoutes); // Sin CSRF para evitar problemas de login
 
-// Otras rutas que normalmente requerirían protección CSRF
-app.use('/api/cart', cartRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/order', orderRoutes);
-app.use('/api/payments', paymentProcessingRoutes);
-app.use('/api/quotations', quotationRoutes);
+// Otras rutas que requieren protección CSRF
+app.use('/api/cart', csrfProtection, cartRoutes);
+app.use('/api/wishlist', csrfProtection, wishlistRoutes);
+app.use('/api/order', csrfProtection, orderRoutes);
+app.use('/api/payments', csrfProtection, paymentProcessingRoutes);
+app.use('/api/quotations', csrfProtection, quotationRoutes);
 
 // Rutas con menor sensibilidad o principalmente de lectura
-app.use('/api/product', productRoutes);
+app.use('/api/product', csrfProtection, productRoutes);
 app.use('/api/tags', tagRoutes);
 app.use('/api/payment-methods', paymentMethodRoutes);
 app.use('/api/shipping-methods', shippingMethodRoutes);
