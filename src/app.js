@@ -39,18 +39,33 @@ app.use(morgan('combined'));
 app.use(compression());
 
 // Configuración de CORS
-console.log(process.env.NODE_ENV)
+console.log('NODE_ENV:', process.env.NODE_ENV);
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? [
-      'https://shop.cohesaspa.com/',
-      'https://shop.cohesaspa.com',
-      'https://haciendacantabriafrontend.vercel.app',
-      'https://haciendacantabriafrontend.vercel.app/', 'http://localhost:5173']
-    : ['http://localhost:5173', 'http://localhost:4173'],
-  methods: ['GET', 'POST', 'PUT', 'DELETE'],
+  origin: function(origin, callback) {
+    // Permitir solicitudes sin origen (como aplicaciones móviles o curl)
+    if (!origin) return callback(null, true);
+    
+    const allowedOrigins = process.env.NODE_ENV === 'production'
+      ? [
+        'https://shop.cohesaspa.com',
+        'https://haciendacantabriafrontend.vercel.app',
+        'http://localhost:5173'
+      ]
+      : ['http://localhost:5173', 'http://localhost:4173'];
+    
+    // Verificar si el origen está permitido
+    if (allowedOrigins.includes(origin) || allowedOrigins.some(allowed => origin.startsWith(allowed))) {
+      callback(null, true);
+    } else {
+      console.warn(`Origen no permitido: ${origin}`);
+      // Si aun estás en desarrollo, puedes permitir todos los orígenes temporalmente
+      callback(null, true); // Cambia a false para rechazar orígenes no permitidos en producción
+    }
+  },
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token', 'X-CSRF-Token', 'x-xsrf-token', 'X-XSRF-Token', 'xsrf-token', '_csrf'],
-  credentials: true
+  credentials: true,
+  maxAge: 86400 // 24 horas de caché para las respuestas preflight
 }));
 
 // Sanitización de datos
