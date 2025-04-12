@@ -33,7 +33,7 @@ app.use('/api/quotations', csrfProtection, quotationRoutes);
 
 // Rutas con menor sensibilidad o principalmente de lectura
 app.use('/api/product', productRoutes);
-app.use('/api/tags', csrfProtection, tagRoutes);
+app.use('/api/tags', tagRoutes);
 app.use('/api/payment-methods', csrfProtection, paymentMethodRoutes);
 app.use('/api/shipping-methods', csrfProtection, shippingMethodRoutes);
 app.use('/api/util', csrfProtection, utilRoutes);
