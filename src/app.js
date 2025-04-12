@@ -79,17 +79,16 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    secure: process.env.NODE_ENV === 'production',
+    secure: true, // Solo funciona con HTTPS
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    sameSite: 'none', // Necesario para cross-origin
     maxAge: 24 * 60 * 60 * 1000 // 1 día
   },
-  // Usar MongoDB para almacenar sesiones
   store: MongoStore.create({
     mongoUrl: process.env.MONGODB_URI,
     collectionName: 'sessions',
     ttl: 24 * 60 * 60, // 1 día en segundos
-    autoRemove: 'native', // Usar TTL index de MongoDB
+    autoRemove: 'native',
     crypto: {
       secret: process.env.SESSION_SECRET || 'haciendacantabria-secret'
     }
@@ -101,16 +100,19 @@ export const csrfProtection = csrf({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax' // Usar siempre 'lax' ya que 'none' no es compatible con la versión de cookie
+    sameSite: 'none', // Necesario para cross-origin
   }
 });
 
-// Ruta para obtener el token CSRF - Optimizada para responder rápidamente
+// Ruta para obtener el token CSRF
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
-  // Establecer cabeceras para evitar caché
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  // Responder inmediatamente con el token
-  res.json({ csrfToken: req.csrfToken() });
+  res.cookie('XSRF-TOKEN', req.csrfToken(), {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: false, // Debe ser accesible desde el frontend
+    sameSite: 'none'
+  });
+  res.json({ success: true });
 });
 
 // Ruta principal
