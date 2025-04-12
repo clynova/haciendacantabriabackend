@@ -10,6 +10,9 @@ import { getApiDocs } from './utils/apiDocs.js';
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import cookieParser from 'cookie-parser';
+import session from 'express-session';
+import csrf from 'csurf';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -43,15 +46,42 @@ app.use(cors({
       'https://shop.cohesaspa.com',
       'https://haciendacantabriafrontend.vercel.app',
       'https://haciendacantabriafrontend.vercel.app/',]
-    : 'http://localhost:5173',
+    : ['http://localhost:5173', 'http://localhost:4173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token', 'X-CSRF-Token', 'x-xsrf-token', 'X-XSRF-Token', 'xsrf-token'],
   credentials: true
 }));
 
 // Sanitización de datos
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+
+// Configuración de cookies y sesión
+app.use(cookieParser());
+app.use(session({
+  secret: process.env.SESSION_SECRET || 'haciendacantabria-secret',
+  resave: false,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  }
+}));
+
+// Configuración de protección CSRF
+export const csrfProtection = csrf({
+  cookie: {
+    secure: process.env.NODE_ENV === 'production',
+    httpOnly: true,
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+  }
+});
+
+// Ruta para obtener el token CSRF
+app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  res.json({ csrfToken: req.csrfToken() });
+});
 
 // Ruta principal
 app.get('/', async (req, res) => {
