@@ -87,7 +87,6 @@ export const csrfProtection = csrf({
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: 'lax', // Usar 'lax' que es compatible con la versión de cookie usada por csurf
-    domain: process.env.NODE_ENV === 'production' ? '.cohesaspa.com' : 'localhost'
   }
 });
 
