@@ -27,7 +27,7 @@ import { csrfProtection } from './src/app.js';
 // TODO: Reactivar la protección CSRF una vez que se solucionen los problemas de integración
 
 // Rutas de autenticación y registro de usuarios (sin CSRF temporalmente)
-app.use('/api/user', userRoutes);
+app.use('/api/user', csrfProtection, userRoutes);
 
 // Otras rutas que normalmente requerirían protección CSRF
 app.use('/api/cart', cartRoutes);
