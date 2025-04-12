@@ -46,7 +46,7 @@ app.use(cors({
       'https://shop.cohesaspa.com/',
       'https://shop.cohesaspa.com',
       'https://haciendacantabriafrontend.vercel.app',
-      'https://haciendacantabriafrontend.vercel.app/']
+      'https://haciendacantabriafrontend.vercel.app/', 'http://localhost:5173']
     : ['http://localhost:5173', 'http://localhost:4173'],
   methods: ['GET', 'POST', 'PUT', 'DELETE'],
   allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token', 'X-CSRF-Token', 'x-xsrf-token', 'X-XSRF-Token', 'xsrf-token', '_csrf'],
@@ -66,7 +66,7 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'lax' : 'none',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
     maxAge: 24 * 60 * 60 * 1000 // 1 día
   },
   // Usar MongoDB para almacenar sesiones
@@ -86,7 +86,7 @@ export const csrfProtection = csrf({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: 'lax', // Usar 'lax' que es compatible con la versión de cookie usada por csurf
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
   }
 });
 
