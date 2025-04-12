@@ -72,7 +72,8 @@ app.use(session({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+    // Usar capitalización correcta para sameSite
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
     maxAge: 24 * 60 * 60 * 1000
   },
   store: MongoStore.create({
@@ -91,7 +92,8 @@ export const csrfProtection = csrf({
   cookie: {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    // Usar capitalización correcta para sameSite
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
   }
 });
 
@@ -102,8 +104,9 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
   res.cookie('XSRF-TOKEN', csrfToken, {
     secure: process.env.NODE_ENV === 'production',
-    httpOnly: false,
-    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax'
+    httpOnly: false, // Debe ser false para que el cliente lo lea
+    // Usar capitalización correcta para sameSite
+    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax'
   });
   res.json({ success: true });
 });
@@ -125,7 +128,13 @@ app.get('/', async (req, res) => {
 
 app.use((err, req, res, next) => {
   console.error('Error capturado:', err);
-  errorHandler(err, req, res, next);
+  // Asegúrate de que el middleware CSRF maneje sus propios errores específicos
+  if (err.code === 'EBADCSRFTOKEN') {
+    console.error('CSRF Token Error:', err);
+    res.status(403).json({ message: 'Invalid CSRF token' });
+  } else {
+    errorHandler(err, req, res, next);
+  }
 });
 
 export default app;
