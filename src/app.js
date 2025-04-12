@@ -110,7 +110,7 @@ app.get('/api/csrf-token', csrfProtection, (req, res) => {
   res.cookie('XSRF-TOKEN', req.csrfToken(), {
     secure: process.env.NODE_ENV === 'production',
     httpOnly: false, // Debe ser accesible desde el frontend
-    sameSite: 'none'
+    sameSite: 'lax'
   });
   res.json({ success: true });
 });
