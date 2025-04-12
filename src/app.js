@@ -90,8 +90,11 @@ export const csrfProtection = csrf({
   }
 });
 
-// Ruta para obtener el token CSRF
+// Ruta para obtener el token CSRF - Optimizada para responder rápidamente
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
+  // Establecer cabeceras para evitar caché
+  res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+  // Responder inmediatamente con el token
   res.json({ csrfToken: req.csrfToken() });
 });
 
