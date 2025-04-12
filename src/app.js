@@ -63,7 +63,7 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token'],
   credentials: true,
   maxAge: 86400 // 24 horas de caché para las respuestas preflight
 }));
