@@ -72,11 +72,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   cookie: {
-    // Usar configuración dinámica basada en NODE_ENV
     secure: process.env.NODE_ENV === 'production',
     httpOnly: true,
     sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    path: '/', // Asegurar que la cookie de sesión también use path raíz
+    path: '/',
     maxAge: 24 * 60 * 60 * 1000
   },
   store: MongoStore.create({
@@ -90,23 +89,20 @@ app.use(session({
   })
 }));
 
-// Configuración de protección CSRF
-// Quitar la opción 'cookie' para que use req.session
+// Configuración de protección CSRF (usa la sesión)
 export const csrfProtection = csrf();
 
 // Ruta para obtener el token CSRF
 app.get('/api/csrf-token', csrfProtection, (req, res) => {
   const csrfToken = req.csrfToken();
-  console.log('Generando token CSRF:', csrfToken);
+  console.log('Generando y devolviendo token CSRF en respuesta:', csrfToken);
   res.set('Cache-Control', 'no-store, no-cache, must-revalidate, private');
-  // La cookie XSRF-TOKEN aún necesita configuración explícita para cross-site
-  res.cookie('XSRF-TOKEN', csrfToken, {
-    secure: process.env.NODE_ENV === 'production',
-    httpOnly: false, // Client script needs to read this
-    sameSite: process.env.NODE_ENV === 'production' ? 'None' : 'Lax',
-    path: '/' // <-- AÑADIDO: Hace la cookie accesible desde cualquier ruta
-  });
-  res.json({ success: true });
+
+  // YA NO ESTABLECEMOS LA COOKIE XSRF-TOKEN
+  // res.cookie('XSRF-TOKEN', csrfToken, { ... }); 
+
+  // Devolvemos el token en el cuerpo JSON
+  res.json({ success: true, csrfToken: csrfToken });
 });
 
 // Ruta principal
@@ -124,23 +120,21 @@ app.get('/', async (req, res) => {
   }
 });
 
+// Middleware de manejo de errores
 app.use((err, req, res, next) => {
   console.error('Error capturado:', err);
   if (err.code === 'EBADCSRFTOKEN') {
-    console.error('CSRF Token Error:', err);
+    console.error('CSRF Token Error detectado en backend:', err);
     res.status(403).json({ message: 'Invalid CSRF token' });
   } else {
-    // Devolver el error genérico si no es manejado por el errorHandler
     if (!res.headersSent) {
         res.status(err.status || 500).json({ 
             status: 'error', 
             message: err.message || 'Something went wrong' 
         });
     } else {
-        next(err); // Si ya se enviaron headers, delegar al manejador por defecto de Express
+        next(err);
     }
-    // Considera si quieres llamar a errorHandler aquí también o si el json anterior es suficiente
-    // errorHandler(err, req, res, next);
   }
 });
 
