@@ -24,7 +24,7 @@ validateEnv();
 const app = express();
 
 // Configuración de confianza para proxy
-app.set('trust proxy', 1);
+app.set('trust proxy', true);
 
 // Rate limiting - Aplicar solo a rutas /api
 app.use('/api', limiter);
@@ -63,7 +63,7 @@ app.use(cors({
     }
   },
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token', 'x-csrf-token', 'X-CSRF-Token', 'x-xsrf-token', 'X-XSRF-Token', 'xsrf-token', '_csrf'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'CSRF-Token'],
   credentials: true,
   maxAge: 86400 // 24 horas de caché para las respuestas preflight
 }));
