@@ -30,11 +30,11 @@ import { csrfProtection } from './src/app.js';
 app.use('/api/user', csrfProtection, userRoutes); // Sin CSRF para evitar problemas de login
 
 // Otras rutas que requieren protección CSRF
-app.use('/api/cart', cartRoutes);
-app.use('/api/wishlist', wishlistRoutes);
-app.use('/api/order', orderRoutes);
-app.use('/api/payments', paymentProcessingRoutes);
-app.use('/api/quotations', quotationRoutes);
+app.use('/api/cart',csrfProtection, cartRoutes);
+app.use('/api/wishlist',csrfProtection, wishlistRoutes);
+app.use('/api/order',csrfProtection, orderRoutes);
+app.use('/api/payments',csrfProtection, paymentProcessingRoutes);
+app.use('/api/quotations',csrfProtection, quotationRoutes);
 
 // Rutas con menor sensibilidad o principalmente de lectura
 app.use('/api/product', productRoutes);
